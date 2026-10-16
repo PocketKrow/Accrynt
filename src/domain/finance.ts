@@ -15,11 +15,38 @@ export function parseMoney(value: string): number | null {
 }
 
 export const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
+export function parseSignedMoney(value: string): number | null {
+  const input = value.trim(), negative = input.startsWith('-')
+  const cents = parseMoney(negative ? input.slice(1) : input)
+  return cents === null ? null : negative ? -cents : cents
+}
+export function obligationPayment(obligation: Obligation, transactions: Transaction[], through = '9999-12-31') {
+  const recordedCents = sum(transactions.filter(t => t.obligationId === obligation.id && t.kind !== 'income' && t.date <= through).map(t => t.amountCents))
+  const remainingCents = obligation.paidAt ? 0 : Math.max(0, obligation.plannedCents - recordedCents)
+  const paid = obligation.paidAt !== null || (recordedCents >= obligation.plannedCents && (recordedCents > 0 || obligation.plannedCents === 0))
+  return { recordedCents, remainingCents, paid, status: paid ? 'Paid' : recordedCents > 0 ? 'Partial' : 'Unpaid' }
+}
+export function dueDate(month: string, day: number): string {
+  monthKeySchema.parse(month)
+  if (!Number.isInteger(day) || day < 1 || day > 31) throw new Error('Invalid day.')
+  const [year, number] = month.split('-').map(Number), last = new Date(0)
+  last.setUTCFullYear(year, number, 0)
+  return `${month}-${String(Math.min(day, last.getUTCDate())).padStart(2, '0')}`
+}
+export function availableMoney(month: string, openingCents: number | null, obligations: Obligation[], transactions: Transaction[], today: string) {
+  const actual = transactions.filter(t => transactionMonth(t.date) === month && t.date <= today)
+  const receivedCents = sum(actual.filter(t => t.kind === 'income').map(t => t.amountCents))
+  const spentCents = sum(actual.filter(t => t.kind !== 'income').map(t => t.amountCents))
+  const outstandingCents = sum(obligations.filter(o => o.month === month).map(o => obligationPayment(o, transactions, today).remainingCents))
+  const trackedCents = openingCents === null ? null : openingCents + receivedCents - spentCents
+  return { receivedCents, spentCents, outstandingCents, trackedCents,
+    afterBillsCents: trackedCents === null ? null : trackedCents - outstandingCents }
+}
 export function monthlySummary(month: string, incomeCents: number, obligations: Obligation[], transactions: Transaction[]) {
   const planned = obligations.filter(o => o.month === month)
   const actual = transactions.filter(t => transactionMonth(t.date) === month)
   const plannedCents = sum(planned.map(o => o.plannedCents))
-  const paidCount = planned.filter(o => o.paidAt !== null).length
+  const paidCount = planned.filter(o => obligationPayment(o, transactions).paid).length
   const actualIncomeCents = sum(actual.filter(t => t.kind === 'income').map(t => t.amountCents))
   const actualOutflowCents = sum(actual.filter(t => t.kind !== 'income').map(t => t.amountCents))
   return {

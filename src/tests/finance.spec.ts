@@ -9,7 +9,7 @@ function obligation(input: Partial<Obligation> = {}): Obligation {
 }
 function transaction(input: Partial<Transaction> = {}): Transaction {
   return { id: crypto.randomUUID(), date: '2026-10-15', name: 'Electricity', category: 'Utilities', kind: 'expense',
-    amountCents: 7800, account: '', obligationId: null, updatedAt: new Date().toISOString(), ...input }
+    amountCents: 7800, account: '', obligationId: null, payment: null, updatedAt: new Date().toISOString(), ...input }
 }
 describe('monetary parsing', () => {
   it('stores integer cents, never rounded floating dollars', () => {

@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { payoffLabel, projectDebt, type DebtCalculationInput } from '../domain/debt'
-import { formatMoney } from '../domain/finance'
+import { compareExtraPayment, payoffLabel, projectDebt, type DebtCalculationInput } from '../domain/debt'
+import { formatMoney, parseMoney } from '../domain/finance'
 
 const props = defineProps<{ debt: DebtCalculationInput; compact?: boolean }>()
 const expanded = ref(false), page = ref(0)
+const extra = ref('25.00')
+const comparison = computed(() => {
+  const cents = parseMoney(extra.value)
+  if (cents === null) return null
+  try { return compareExtraPayment(props.debt, cents) } catch { return null }
+})
 const projection = computed(() => projectDebt(props.debt, expanded.value))
 const rows = computed(() => projection.value.schedule.slice(page.value * 12, (page.value + 1) * 12))
 const pageCount = computed(() => Math.ceil(projection.value.schedule.length / 12))
@@ -44,6 +50,19 @@ const amount = (value: number | null) => value === null ? '—' : formatMoney(va
           </table></div>
           <div v-if="pageCount > 1" class="forecast-pagination"><button class="button" :disabled="page === 0" @click="page--">Previous 12</button><span class="small-text">Page {{ page + 1 }} of {{ pageCount }}</span><button class="button" :disabled="page === pageCount - 1" @click="page++">Next 12</button></div>
         </template>
+      </div>
+    </details>
+    <details v-if="!compact" class="extra-payment-details">
+      <summary>Compare an extra payment</summary>
+      <div class="recurring-content">
+        <label class="comparison-label">Extra monthly payment (USD)<input v-model="extra" inputmode="decimal" /></label>
+        <div class="comparison-presets"><button v-for="value in [25, 50, 100]" :key="value" class="button small" @click="extra = value.toFixed(2)">+{{ formatMoney(value * 100) }}</button></div>
+        <template v-if="comparison">
+          <dl class="debt-facts"><div><dt>New monthly payment</dt><dd class="mono">{{ formatMoney(comparison.paymentCents) }}</dd></div><div><dt>Estimated payoff</dt><dd>{{ payoffLabel(comparison.improved) }}</dd></div><template v-if="comparison.monthsSaved !== null"><div><dt>Time saved</dt><dd>{{ comparison.monthsSaved }} months</dd></div><div><dt>Interest saved</dt><dd class="mono good-text">{{ formatMoney(comparison.interestSavedCents!) }}</dd></div></template></dl>
+          <p v-if="comparison.improved.status === 'payoff' && comparison.monthsSaved === null" class="form-hint">This payment reaches payoff; the saved plan has no comparable payoff estimate.</p>
+        </template>
+        <p v-else class="form-hint">Enter a valid extra amount within the supported payment limit.</p>
+        <p class="form-hint">Uses the same monthly assumptions as the repayment estimate. Compare here, then edit your debt’s planned payment to save a change.</p>
       </div>
     </details>
   </section>

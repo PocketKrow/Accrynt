@@ -98,3 +98,15 @@ export function payoffLabel(projection: DebtProjection): string {
     case 'payoff': return `${projection.months} monthly payment${projection.months === 1 ? '' : 's'}`
   }
 }
+
+export function compareExtraPayment(debt: DebtCalculationInput, extraCents: number) {
+  assertMoney(extraCents)
+  const base = projectDebt(debt)
+  const increased = base.plannedPaymentCents + extraCents
+  assertMoney(increased)
+  const improved = projectDebt({ ...debt, monthlyPaymentCents: increased })
+  const comparable = base.status === 'payoff' && improved.status === 'payoff'
+  return { base, improved, paymentCents: increased,
+    monthsSaved: comparable ? base.months! - improved.months! : null,
+    interestSavedCents: comparable ? base.totalInterestCents! - improved.totalInterestCents! : null }
+}

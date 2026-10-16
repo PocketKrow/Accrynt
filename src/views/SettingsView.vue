@@ -21,7 +21,7 @@ const rowCounts = computed(() => ({
   months: store.months.length,
   obligations: store.obligations.length,
   transactions: store.transactions.length,
-  debts: store.debts.length
+  debts: store.debts.length, recurringRules: store.recurringRules.length, recurringOccurrences: store.recurringOccurrences.length
 }))
 function handleError(e: unknown) { error.value = e instanceof Error ? e.message : 'An unexpected storage error occurred.' }
 async function exportData() {
@@ -50,7 +50,7 @@ async function chooseBackup(event: Event) {
 }
 async function restore() {
   if (busy.value || !readyBackup.value) return
-  const counts = `${readyBackup.value.months.length} months, ${readyBackup.value.obligations.length} obligations, ${readyBackup.value.transactions.length} transactions, and ${readyBackup.value.debts.length} debts`
+  const counts = `${readyBackup.value.months.length} months, ${readyBackup.value.obligations.length} obligations, ${readyBackup.value.transactions.length} transactions, ${readyBackup.value.debts.length} debts, ${readyBackup.value.recurringRules.length} recurring rules, and ${readyBackup.value.recurringOccurrences.length} recurring entries`
   if (!confirm(`Replace ALL local Accrynt data with this backup (${counts})? This overwrites existing records. Export your current data first.`)) return
   busy.value = true; error.value = ''
   try {
@@ -107,11 +107,11 @@ async function clearAll() {
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">YOUR RECORDS</span><h2>Backup & restore</h2></div></div>
       <p class="body-copy">Export a versioned portable JSON archive. Save it somewhere outside this browser. Restore replaces all records only after validation and explicit confirmation.</p>
-      <div class="data-counts"><span>{{ rowCounts.months }} months</span><span>{{ rowCounts.obligations }} obligations</span><span>{{ rowCounts.transactions }} transactions</span><span>{{ rowCounts.debts }} debts</span></div>
+      <div class="data-counts"><span>{{ rowCounts.months }} months</span><span>{{ rowCounts.obligations }} obligations</span><span>{{ rowCounts.transactions }} transactions</span><span>{{ rowCounts.debts }} debts</span><span>{{ rowCounts.recurringRules }} recurring rules</span><span>{{ rowCounts.recurringOccurrences }} recurring entries</span></div>
       <button class="button primary" :disabled="busy" @click="exportData">Download JSON backup</button>
       <hr class="section-divider"/>
       <label class="file-label">Select an Accrynt backup file<input ref="backupInput" type="file" :disabled="busy" accept="application/json,.json" @change="chooseBackup" /></label>
-      <p v-if="readyBackup" class="success-message">Validated backup: {{ readyBackup.months.length }} month(s), {{ readyBackup.obligations.length }} obligation(s), {{ readyBackup.transactions.length }} transaction(s), {{ readyBackup.debts.length }} debt(s).</p>
+      <p v-if="readyBackup" class="success-message">Validated backup: {{ readyBackup.months.length }} month(s), {{ readyBackup.obligations.length }} obligation(s), {{ readyBackup.transactions.length }} transaction(s), {{ readyBackup.debts.length }} debt(s), {{ readyBackup.recurringRules.length }} recurring rule(s), {{ readyBackup.recurringOccurrences.length }} recurring entry/entries.</p>
       <p v-if="importError" class="error-message" role="alert">{{ importError }}</p>
       <button v-if="readyBackup" class="button danger-button" :disabled="busy" @click="restore">Replace local records with backup</button>
     </section>

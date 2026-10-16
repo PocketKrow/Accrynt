@@ -1,9 +1,10 @@
-import { computed, onScopeDispose, ref, shallowRef } from 'vue'
+import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { liveQuery } from 'dexie'
 import { db, readWorkspace } from '../data/database'
-import { currentMonth, type MonthPlan, type Obligation, type Transaction, type Debt } from '../domain/models'
-import { monthlySummary } from '../domain/finance'
+import { currentMonth, localDate, type MonthPlan, type Obligation, type Transaction, type Debt, type RecurringRule, type RecurringOccurrence } from '../domain/models'
+import { availableMoney, monthlySummary, sum } from '../domain/finance'
+import { localRepository } from '../data/repository'
 
 const PREF_THEME = 'accrynt-theme-v1'
 function loadTheme(): 'light' | 'dark' {
@@ -15,25 +16,48 @@ export const useFinanceStore = defineStore('finance', () => {
   const obligations = shallowRef<Obligation[]>([])
   const transactions = shallowRef<Transaction[]>([])
   const debts = shallowRef<Debt[]>([])
+  const recurringRules = shallowRef<RecurringRule[]>([]), recurringOccurrences = shallowRef<RecurringOccurrence[]>([])
   const month = ref(currentMonth())
+  const today = ref(localDate())
   const theme = ref<'light' | 'dark'>(loadTheme())
   const loaded = ref(false)
   const error = ref('')
   const notice = ref('')
   let subscription: { unsubscribe(): void } | null = null
+  let clock: ReturnType<typeof setInterval> | null = null
 
   const monthData = computed(() => months.value.find(m => m.key === month.value))
   const monthObligations = computed(() => obligations.value.filter(o => o.month === month.value)
     .slice().sort((a, b) => (a.dueDay ?? 32) - (b.dueDay ?? 32) || a.name.localeCompare(b.name)))
   const monthTransactions = computed(() => transactions.value.filter(t => t.date.slice(0, 7) === month.value)
     .slice().sort((a, b) => b.date.localeCompare(a.date)))
-  const summary = computed(() => monthlySummary(month.value, monthData.value?.incomeCents ?? 0, obligations.value, transactions.value))
-  const hasAnyData = computed(() => months.value.length + obligations.value.length + transactions.value.length + debts.value.length > 0)
+  const expectedOccurrences = computed(() => recurringOccurrences.value.filter(o => o.month === month.value && o.kind === 'income'))
+  const expectedIncomeCents = computed(() => (monthData.value?.incomeCents ?? 0) + sum(expectedOccurrences.value.filter(o => !o.cancelled).map(o => o.amountCents)))
+  const summary = computed(() => monthlySummary(month.value, expectedIncomeCents.value, obligations.value, transactions.value))
+  const cashflow = computed(() => availableMoney(month.value, monthData.value?.openingCents ?? null, obligations.value, transactions.value, today.value))
+  const hasAnyData = computed(() => months.value.length + obligations.value.length + transactions.value.length + debts.value.length + recurringRules.value.length > 0)
+  let generating = false, requested = false
+  async function generateMonth() {
+    if (!subscription || !recurringRules.value.length) return
+    requested = true
+    if (generating) return
+    generating = true
+    try {
+      while (requested && subscription) { requested = false; await localRepository.ensureRecurringMonth(month.value) }
+    } catch (reason) {
+      error.value = reason instanceof Error ? reason.message : 'Unable to prepare recurring items.'
+      stop()
+    } finally { generating = false }
+  }
+  watch(month, () => { void generateMonth() })
 
   function start() {
     if (subscription) return
     loaded.value = false
     error.value = ''
+    today.value = localDate()
+    if (clock !== null) clearInterval(clock)
+    clock = setInterval(() => { today.value = localDate() }, 60_000)
     subscription = liveQuery(async () => {
       await db.open()
       return readWorkspace()
@@ -43,8 +67,11 @@ export const useFinanceStore = defineStore('finance', () => {
         obligations.value = payload.obligations
         transactions.value = payload.transactions
         debts.value = payload.debts
+        recurringRules.value = payload.recurringRules
+        recurringOccurrences.value = payload.recurringOccurrences
         error.value = ''
         loaded.value = true
+        void generateMonth()
       },
       error(reason: unknown) {
         error.value = reason instanceof Error ? reason.message : 'Local database access failed.'
@@ -53,7 +80,7 @@ export const useFinanceStore = defineStore('finance', () => {
       }
     })
   }
-  function stop() { subscription?.unsubscribe(); subscription = null }
+  function stop() { subscription?.unsubscribe(); subscription = null; if (clock !== null) clearInterval(clock); clock = null }
   onScopeDispose(stop)
   function setTheme(value: 'light' | 'dark') {
     theme.value = value
@@ -62,8 +89,8 @@ export const useFinanceStore = defineStore('finance', () => {
   function notify(message: string) { notice.value = message }
   function clearNotice() { notice.value = '' }
   return {
-    months, obligations, transactions, debts, month, theme, loaded, error, notice,
-    monthData, monthObligations, monthTransactions, summary, hasAnyData,
+    months, obligations, transactions, debts, recurringRules, recurringOccurrences, month, today, theme, loaded, error, notice,
+    monthData, monthObligations, monthTransactions, expectedOccurrences, expectedIncomeCents, summary, cashflow, hasAnyData,
     start, stop, setTheme, notify, clearNotice
   }
 })
