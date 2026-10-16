@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ledgerCsv, compareTransactions } from '../domain/ledger'
-import { historyRows } from '../domain/reports'
+import { historyRows, historyCsv } from '../domain/reports'
 import { demoFixture } from '../data/demo'
 describe('honest reporting and safe exports', () => {
   it('keeps missing history unknown and excludes scheduled actuals', () => {
@@ -9,6 +9,15 @@ describe('honest reporting and safe exports', () => {
     expect(rows[0]).toMatchObject({ plannedCents: null, outflowCents: null, incomeCents: null })
     expect(rows[11].incomeCents).toBe(332500)
     expect(rows[11].outflowCents).toBe(165000) // rent + utilities + insurance + partial groceries + card payment
+  })
+  it('clamps history at January 0001 instead of crashing the report', () => {
+    expect(historyRows('0001-01', 12, [], [], [], [], '2026-10-16').map(r=>r.month)).toEqual(['0001-01'])
+  })
+  it('exports missing report values as blank and preserves negative recorded net cents', () => {
+    const rows = historyRows('2026-10', 3, [], [], [], [], '2026-10-16')
+    expect(historyCsv(rows, true)).toContain('DEMO · SYNTHETIC DATA')
+    expect(historyCsv([{ ...rows[0], netCents:-101 }])).toContain('\"-1.01\"')
+    expect(historyCsv(rows)).not.toContain('0.00')
   })
   it('quotes commas, quotes, newlines and neutralizes formula prefixes', () => {
     const t = demoFixture('2026-10-16').transactions[0]

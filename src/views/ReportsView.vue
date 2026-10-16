@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { historyRows } from '../domain/reports'
+import { downloadFile } from '../data/backup'
+import { isDemo } from '../data/workspace'
+import { historyRows, historyCsv } from '../domain/reports'
 import PageHeader from '../components/PageHeader.vue'
 import MetricCard from '../components/MetricCard.vue'
 import { useFinanceStore } from '../stores/finance'
@@ -27,7 +29,7 @@ const outflow = computed(() => sum(categories.value.map(row => row[1])))
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">PAYMENT CHECKLIST</span><h2>Plan completion</h2></div></div><div class="snapshot-main mono">{{ store.summary.paidCount }} / {{ store.summary.obligationCount }}</div><p class="snapshot-caption">Obligations covered by payments or manual confirmation</p><div class="ledger-facts"><div><span>Still outstanding</span><strong>{{ store.summary.unpaidCount }}</strong></div><div><span>Actual ledger net</span><strong class="mono">{{ formatMoney(store.summary.actualNetCents) }}</strong></div></div><p class="fine-print">This is not a bank reconciliation report.</p></section>
   </div>
-  <section class="panel history-panel"><div class="panel-heading"><div><span class="eyebrow">RECORDED HISTORY</span><h2>Plan versus actual</h2></div><label>History<select v-model="historyCount" aria-label="History"><option :value="3">3 months</option><option :value="6">6 months</option><option :value="12">12 months</option></select></label></div>
+  <section class="panel history-panel"><div class="panel-heading"><div><span class="eyebrow">RECORDED HISTORY</span><h2>Plan versus actual</h2></div><button class="button small" @click="downloadFile(`Accrynt-report-${store.month}.csv`, historyCsv(history, isDemo), 'text/csv;charset=utf-8')">Export report CSV</button><label>History<select v-model="historyCount" aria-label="History"><option :value="3">3 months</option><option :value="6">6 months</option><option :value="12">12 months</option></select></label></div>
     <p class="fine-print">Selected period ends in {{ store.month }}. Actuals include entries through {{ store.today }}; months without recorded activity stay unknown. Current-month values may be incomplete.</p>
     <div class="trend-chart" role="img" aria-label="Planned versus recorded outflow. Exact values appear in the following table."><div v-for="row in history" :key="row.month" class="trend-month"><div class="trend-bars"><span v-if="row.plannedCents !== null" class="trend-plan" :style="{ height: `${row.plannedCents / trendMax * 100}%` }"/><span v-if="row.outflowCents !== null" class="trend-actual" :style="{ height: `${row.outflowCents / trendMax * 100}%` }"/></div><span class="mono">{{ row.month.slice(2) }}</span></div></div>
     <p class="fine-print">Gray: planned outflow · Cyan: actual outflow · Blank: no recorded value</p>

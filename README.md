@@ -1,4 +1,4 @@
-# Accrynt · v0.4
+# Accrynt · v0.5
 
 A personal, local-first finance workspace built with **Vue 3 + Vite + TypeScript + SCSS + Pinia + Vue Router + Dexie/IndexedDB + Zod**. The Carbon × Glacier identity, full-viewport workspace, six sections, and right desktop rail are preserved. There is no account system or backend.
 
@@ -63,9 +63,9 @@ The manual paid checkbox remains for payments tracked elsewhere. It only records
 - A manual paid confirmation stops reserving a bill but does not reduce tracked cash. Enter missing transactions to keep cash estimates accurate. No bank balance is verified by Accrynt.
 - Payment principal is the confirmed amount minus interest paid. By default saved debt balance decreases by principal. If the saved statement balance already includes this interest, check that option: the full payment reduces the balance while the principal/interest split remains accurate. Accrynt does not automatically accrue unpaid interest or fees.
 - All payment effects commit together or roll back together. Repeated saves of the same request apply once. A changed debt or bill invalidates an open payment form.
-- Connected payments are corrected by undoing and recording again. Undo requires newer payments on that debt to be undone first and the debt balance to match the receipt's closing balance. Statement adjustments must be reconciled before undo. If the original debt was deleted, undo only removes the Ledger entry and refreshes any remaining bill link.
+- Connected payments are corrected by undoing and recording again. Undo requires newer balance events on that debt to be undone first and the debt balance to match the receipt's closing balance. Reverse later statement adjustments from debt history before undoing earlier payments. If the original debt was deleted, undo only removes the Ledger entry and refreshes any remaining bill link.
 - Ordinary Ledger transactions retain their editor. A generic debt-payment entry records outflow only; use Record payment to apply principal as well.
-- Money uses integer cents and annual rates use integer basis points. Valid older zero-value Ledger history remains restorable; new money movements must be positive.
+- Money uses integer cents and annual rates use integer thousandths of one percent (6.125% = 6125). Valid older zero-value Ledger history remains restorable; new money movements must be positive.
 
 ## Recurrence behavior
 
@@ -77,13 +77,13 @@ Use **Repeat monthly** on an existing bill to adopt that entry without duplicati
 
 Use card APR for credit cards and annual interest rate for loans; loan APR may include fees. Forecasts apply `balance × annual rate ÷ 12`, rounded half up to cents before each fixed monthly payment. The final payment is capped at the amount owed. Blank payment uses the saved minimum, held constant; explicit zero means no payment. Missing rates mean unknown; enter 0 for interest-free accounts.
 
-Payoff is a count of monthly payments, not a calendar date. Projections stop at 1,200 months and withhold incomplete lifetime totals. Daily interest, promotional balances, changing minimums, new charges, and lender-specific reconciliation are outside the estimate. Comparing an extra payment does not change your saved payment plan. See [debt calculation evidence](docs/QA-debt-interest.md).
+Payoff is a count of monthly payments, not a calendar date. Projections stop at 1,200 months and withhold incomplete lifetime totals. Payoff remains a nominal monthly planning model. A separate date-aware estimate supports completed monthly periods or explicitly selected simple daily 365/360 models. Neither changes saved balances. Variable rates, lender grace periods, changing minimums and lender-specific daily balances remain outside the model. Comparing an extra payment does not change your saved payment plan. See [debt calculation evidence](docs/QA-debt-interest.md).
 
 ## Data and recovery
 
-Records remain in IndexedDB **`accrynt-local-v1`**, now at Dexie schema version **3**. Its name is unchanged. Upgrades preserve existing records, add unknown opening cash and empty payment receipts, and create recurring-rule and recurring-occurrence tables. Stored data belongs to the exact origin and browser profile: domains, ports, `localhost`, `127.0.0.1`, and different browsers have separate stores. Only theme preference uses `localStorage`.
+Records remain in IndexedDB **`accrynt-local-v1`**, now at Dexie schema version **4**. Its name is unchanged. The v4 upgrade preserves balances and receipt splits, converts legacy basis-point rates exactly (×10), adds unknown balance reference dates and creates a balance-event table. Historical Dexie versions 1–3 are unchanged. Stored data belongs to the exact origin and browser profile: domains, ports, `localhost`, `127.0.0.1`, and different browsers have separate stores. Only theme preference uses `localStorage`.
 
-**Settings → Download JSON backup** exports all six tables using `accrynt-portable` schema **3**, including receipts, opening balances, rules, skipped entries, and monthly snapshots. Strict v1/v2 backups remain supported with neutral defaults for new fields. Old app releases cannot restore v3 exports. Restore validates IDs, references, receipt arithmetic, and recurrence keys before atomic replacement. The file picker has a 15 MB limit. Backups are unencrypted.
+**Settings → Download JSON backup** exports all seven tables using `accrynt-portable` schema **4**, including receipts, opening balances, rules, skipped entries, and monthly snapshots. Strict v1/v2/v3 backups remain supported with neutral defaults for new fields. Old app releases cannot restore v4 exports. Restore validates IDs, references, receipt arithmetic, and recurrence keys before atomic replacement. The file picker has a 15 MB limit. Backups are unencrypted.
 
 Browser data clearing, profile removal, or eviction can remove records. Persistent-storage permission may be declined and does not replace external backups. A storage error offers Retry without clearing records. Selected month starts at the current month on launch; historical plans remain accessible. Optional historical example data loads only on request into a completely empty workspace.
 
@@ -99,8 +99,21 @@ There is no bank syncing, server, cloud account, analytics, structured account-t
 
 Run `npm ci`, `npm run build`, then `npm run preview`. Open `http://localhost:4173/?demo=1#/` (or choose **Try demo** in the app). The ordinary workspace remains at `/#/`.
 
-The demo runs the same forms, calculations, repository and IndexedDB writes as the app. Its separate `accrynt-demo-v1` database seeds six months of fictional history once, persists edits across reloads, and supports a confirmed **Reset demo** with negative-cash, near-payoff and February scenarios. **Return to my workspace** performs full navigation back to `accrynt-local-v1`; it does not copy or clear personal records. Demo backups carry a `DEMO-SYNTHETIC` filename. Theme preferences are separate.
+The demo runs the same forms, calculations, repository and IndexedDB writes as the app. Its separate `accrynt-demo-v1` database seeds six months of fictional history once, persists edits across reloads, and supports a confirmed **Reset demo** with negative-cash, near-payoff and February scenarios. **Return to my workspace** performs full navigation back to `accrynt-local-v1`; it does not copy or clear personal records. Demo backups carry a `DEMO-SYNTHETIC` filename and synthetic-workspace metadata. Theme preferences are separate.
 
 Offline use requires one successful online load and an installed service worker. Browser storage is profile/origin specific; backups are still necessary. No backend or telemetry is involved. See `docs/IMPLEMENTATION-REVIEW.md` for audit decisions, date semantics and staged migration notes.
 
 The wide-screen workbench adds an Overview commitments column and Ledger receipt inspector. In Ledger choose **All time**, filter by type, and **Export CSV** for the visible results. CSV quotes every field and neutralizes spreadsheet formula prefixes in user-entered text. Reports offers 3/6/12-month views based on saved plans and dated entries; **No records** means unknown, not zero. Playwright captures all six pages in both themes for desktop/mobile review; CI publishes these in `playwright-review-evidence`.
+
+
+## Debt balances, adjustments and v4 recovery
+
+Set a balance reference date and estimate method in the debt editor for automatically recomputed, clearly labeled unposted-interest and present-balance estimates. An unknown reference date or rate stays unknown. The monthly payoff forecast is separate from the selected dated-accrual model.
+
+**Adjust balance** records statement matching, fees, charges or refunds without implying cash movement. Nominal monthly interest posting has a rate/period/amount confirmation and a deterministic per-debt/month key; it refuses a second period posting or a month already containing interest-bearing payments. It cannot tell whether an external lender has already included interest: review your statement before confirming. Daily estimates are display-only. No automatic posting is enabled.
+
+Changing a balance/reference date in the debt editor also records a statement event. **Balance adjustment history** reverses only the latest active event when its after-balance still matches. Reversal history is retained; a reversed interest period cannot be posted again—use an actual statement adjustment for corrections. Payments recorded after posted interest suggest the already-in-balance option and only the unallocated posted amount. Subsequent payments without an explicit posting require manual interest review rather than assuming another full monthly charge.
+
+Restore previews record counts, provenance and export age, warns when newer local records exist, and downloads a current safety snapshot before replacement or clearing. Keep that file outside the browser. v1–v3 imports remain supported; new v4 exports require the updated app. Database upgrades are forward-only: export a backup before upgrading, and use the updated app for recovery rather than opening a migrated profile in an older release. See [accounting contract](docs/ADR-0001-debt-accounting.md) and [implementation review](docs/IMPLEMENTATION-REVIEW.md).
+
+**Reports → Export report CSV** exports the selected 3/6/12-month view. Unknown values remain blank. See [v0.5 verification](docs/QA-v0.5.md) for the migration fixtures, responsive matrix and browser evidence.

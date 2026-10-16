@@ -14,7 +14,7 @@ const comparison = computed(() => {
 const projection = computed(() => projectDebt(props.debt, expanded.value))
 const rows = computed(() => projection.value.schedule.slice(page.value * 12, (page.value + 1) * 12))
 const pageCount = computed(() => Math.ceil(projection.value.schedule.length / 12))
-watch(() => [props.debt.balanceCents, props.debt.aprBasisPoints, props.debt.minimumCents, props.debt.monthlyPaymentCents], () => { page.value = 0 })
+watch(() => [props.debt.balanceCents, props.debt.aprMilliPercent, props.debt.minimumCents, props.debt.monthlyPaymentCents], () => { page.value = 0 })
 const amount = (value: number | null) => value === null ? '—' : formatMoney(value)
 </script>
 <template>

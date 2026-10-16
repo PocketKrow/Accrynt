@@ -5,7 +5,7 @@ import { liveQuery } from 'dexie'
 import { db, readWorkspace } from '../data/database'
 import { seedDemo } from '../data/demo'
 import { isDemo } from '../data/workspace'
-import { currentMonth, localDate, type MonthPlan, type Obligation, type Transaction, type Debt, type RecurringRule, type RecurringOccurrence } from '../domain/models'
+import { currentMonth, localDate, type MonthPlan, type Obligation, type Transaction, type Debt, type RecurringRule, type RecurringOccurrence, type BalanceEvent } from '../domain/models'
 import { availableMoney, monthlySummary, sum } from '../domain/finance'
 import { localRepository } from '../data/repository'
 
@@ -20,12 +20,13 @@ export const useFinanceStore = defineStore('finance', () => {
   const transactions = shallowRef<Transaction[]>([])
   const debts = shallowRef<Debt[]>([])
   const recurringRules = shallowRef<RecurringRule[]>([]), recurringOccurrences = shallowRef<RecurringOccurrence[]>([])
+  const balanceEvents = shallowRef<BalanceEvent[]>([])
   const month = ref(currentMonth())
   const today = ref(localDate())
   const theme = ref<'light' | 'dark'>(loadTheme())
   const loaded = ref(false)
   const error = ref('')
-  const notice = ref('')
+  const notice = ref(''), operationError = ref('')
   let subscription: { unsubscribe(): void } | null = null
   let clock: ReturnType<typeof setInterval> | null = null
 
@@ -38,7 +39,7 @@ export const useFinanceStore = defineStore('finance', () => {
   const expectedIncomeCents = computed(() => (monthData.value?.incomeCents ?? 0) + sum(expectedOccurrences.value.filter(o => !o.cancelled).map(o => o.amountCents)))
   const summary = computed(() => monthlySummary(month.value, expectedIncomeCents.value, obligations.value, transactions.value, today.value))
   const cashflow = computed(() => availableMoney(month.value, monthData.value?.openingCents ?? null, obligations.value, transactions.value, today.value))
-  const hasAnyData = computed(() => months.value.length + obligations.value.length + transactions.value.length + debts.value.length + recurringRules.value.length > 0)
+  const hasAnyData = computed(() => months.value.length + obligations.value.length + transactions.value.length + debts.value.length + recurringRules.value.length + balanceEvents.value.length > 0)
   let generating = false, requested = false
   let initialization: Promise<void> | null = null
   async function generateMonth() {
@@ -74,6 +75,7 @@ export const useFinanceStore = defineStore('finance', () => {
         obligations.value = payload.obligations
         transactions.value = payload.transactions
         debts.value = payload.debts
+        balanceEvents.value = payload.balanceEvents
         recurringRules.value = payload.recurringRules
         recurringOccurrences.value = payload.recurringOccurrences
         error.value = ''
@@ -95,9 +97,11 @@ export const useFinanceStore = defineStore('finance', () => {
     try { localStorage.setItem(PREF_THEME, value) } catch { /* theme fallback remains in memory */ }
   }
   function notify(message: string) { notice.value = message }
+  function fail(message:string) { operationError.value=message }
+  function dismissError() { operationError.value='' }
   function clearNotice() { notice.value = '' }
   return {
-    months, obligations, transactions, debts, recurringRules, recurringOccurrences, month, today, theme, loaded, error, notice,
+    months, obligations, transactions, debts, balanceEvents, recurringRules, recurringOccurrences, month, today, theme, loaded, error, notice, operationError, fail, dismissError,
     monthData, monthObligations, monthTransactions, expectedOccurrences, expectedIncomeCents, summary, cashflow, hasAnyData,
     start, stop, setTheme, notify, clearNotice
   }

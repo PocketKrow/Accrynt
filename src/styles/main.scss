@@ -261,3 +261,8 @@ input,select{min-width:0}
 
 .row-actions{flex-wrap:wrap;row-gap:10px}.row-actions button{min-height:28px}
 @media(max-width:720px){.panel-heading{flex-wrap:wrap}.transaction-select{white-space:normal}}
+
+.accrual-estimate{border-top:1px solid var(--line);margin-top:16px;padding-top:8px}.accrual-estimate .debt-facts{display:grid;grid-template-columns:1fr;gap:8px}.accrual-estimate dt{font-size:11px;color:var(--muted)}.accrual-estimate dd{margin:3px 0 0;font-size:12px}.balance-history{margin:14px 0;font-size:12px}.balance-history-entry{border-top:1px solid var(--line);padding:12px 0;overflow-wrap:anywhere}.balance-history-entry p{margin:6px 0}.balance-history-entry small{display:block;color:var(--muted);margin:6px 0}.balance-history-entry .text-link{white-space:normal}
+.eyebrow,.metric-label,.rail-heading,.rail-section-label,.rail-footer,.nav-index{font-size:10px}
+.fine-print,.form-hint,.cell-sub,.activity-row small,.bill-name small{font-size:11px;line-height:1.6}
+@media(max-width:720px){.button,.icon-button,.row-actions button{min-height:44px}.row-actions{gap:4px 12px}}
