@@ -132,8 +132,12 @@ test('legacy backup debts gain forecasts; schedules paginate and stay within the
 })
 
 test('an existing v1 browser database upgrades in place with linked records intact', async ({ page }) => {
-  // A static same-origin resource lets us seed the old schema before the app opens Dexie.
-  await page.goto('/manifest.webmanifest')
+  // Same-origin HTML seeds the old schema before the app opens Dexie. A manifest
+  // navigation is a download in Firefox, so use an explicit HTML test fixture.
+  await page.route('**/__migration-fixture', route => route.fulfill({
+    contentType: 'text/html', body: '<!doctype html><title>Migration fixture</title>'
+  }))
+  await page.goto('/__migration-fixture')
   await page.evaluate(async () => {
     const stamp = '2026-10-01T00:00:00.000Z'
     const debtId = 'a21d16f2-1f1b-4dc4-a2f8-033c92766388'
