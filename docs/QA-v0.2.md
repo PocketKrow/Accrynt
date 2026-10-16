@@ -75,3 +75,9 @@ An explicit `npm audit --json` found advisories in the original Vitest 3 test-to
 - Next milestone: complete monthly budgeting with deliberate recurring definitions, due-date states, and preserved history. Implement linked payment recording only with explicit partial-payment and reconciliation rules.
 
 Implementation references: [Dexie transactions](https://dexie.org/docs/Dexie/Dexie.transaction()), [Dexie liveQuery](https://dexie.org/docs/liveQuery()), [Playwright web server](https://playwright.dev/docs/test-webserver), and [Playwright service workers](https://playwright.dev/docs/service-workers).
+
+## Full-viewport layout follow-up
+
+Removed the centered 1510px shell cap, outer padding, decorative border/shadow, and reduced-height calculations. The frame now fills available width and at least the dynamic viewport height; its flex layout lets the existing right rail and content use the window. Inner panel spacing and mobile navigation remain intact.
+
+Production-build Chromium measurements passed **72 viewport cases**: all six routes, both themes, and widths/heights of 320×800, 768×1024, 1280×800, 1920×1080, 2560×1440, and 3840×2160. The frame starts at the left viewport edge, spans the available width, meets the viewport height, and has no document-level horizontal overflow. Desktop right-rail alignment also passed. Populated Overview screenshots at 1920px dark, 2560px light, and 320px dark were visually inspected. The production build and existing nine local Chromium smoke tests passed during this follow-up. Latest PR checks provide the remote cross-browser result for the final commit.
