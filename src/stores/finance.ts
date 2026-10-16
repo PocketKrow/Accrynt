@@ -1,5 +1,6 @@
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue'
 import { defineStore } from 'pinia'
+import { compareTransactions } from '../domain/ledger'
 import { liveQuery } from 'dexie'
 import { db, readWorkspace } from '../data/database'
 import { seedDemo } from '../data/demo'
@@ -32,7 +33,7 @@ export const useFinanceStore = defineStore('finance', () => {
   const monthObligations = computed(() => obligations.value.filter(o => o.month === month.value)
     .slice().sort((a, b) => (a.dueDay ?? 32) - (b.dueDay ?? 32) || a.name.localeCompare(b.name)))
   const monthTransactions = computed(() => transactions.value.filter(t => t.date.slice(0, 7) === month.value)
-    .slice().sort((a, b) => b.date.localeCompare(a.date) || (b.payment?.recordedAt ?? '').localeCompare(a.payment?.recordedAt ?? '') || a.id.localeCompare(b.id)))
+    .slice().sort(compareTransactions))
   const expectedOccurrences = computed(() => recurringOccurrences.value.filter(o => o.month === month.value && o.kind === 'income'))
   const expectedIncomeCents = computed(() => (monthData.value?.incomeCents ?? 0) + sum(expectedOccurrences.value.filter(o => !o.cancelled).map(o => o.amountCents)))
   const summary = computed(() => monthlySummary(month.value, expectedIncomeCents.value, obligations.value, transactions.value, today.value))
