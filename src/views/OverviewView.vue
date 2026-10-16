@@ -24,6 +24,7 @@ async function togglePaid(id: string, paid: boolean) {
   <PageHeader label="01 / WORKSPACE" :title="`${longMonth(store.month).split(' ')[0]} at a glance`" subtitle="Know what is planned, what is paid, and what actually happened." month-navigation>
     <template #actions><button class="button primary" @click="showForm = true">+ Add obligation</button></template>
   </PageHeader>
+  <p v-if="!store.hasAnyData" class="body-copy">Start in <RouterLink class="text-link" to="/plan">Monthly Plan</RouterLink>: set your expected income, then add your bills. Your workspace stays on this device; Settings provides backup and storage controls.</p>
   <div class="metrics-grid">
     <MetricCard label="Expected income" :value="formatMoney(income)" detail="Monthly plan, not a deposit" />
     <MetricCard label="Planned outflow" :value="formatMoney(store.summary.plannedCents)" detail="Bills and debt commitments" />

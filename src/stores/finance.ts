@@ -1,7 +1,7 @@
-import { computed, ref, shallowRef } from 'vue'
+import { computed, onScopeDispose, ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
 import { liveQuery } from 'dexie'
-import { db } from '../data/database'
+import { db, readWorkspace } from '../data/database'
 import { currentMonth, type MonthPlan, type Obligation, type Transaction, type Debt } from '../domain/models'
 import { monthlySummary } from '../domain/finance'
 
@@ -32,26 +32,29 @@ export const useFinanceStore = defineStore('finance', () => {
 
   function start() {
     if (subscription) return
+    loaded.value = false
+    error.value = ''
     subscription = liveQuery(async () => {
-      const [allMonths, allObligations, allTransactions, allDebts] = await Promise.all([
-        db.months.toArray(), db.obligations.toArray(), db.transactions.toArray(), db.debts.toArray()
-      ])
-      return { allMonths, allObligations, allTransactions, allDebts }
+      await db.open()
+      return readWorkspace()
     }).subscribe({
       next(payload) {
-        months.value = payload.allMonths
-        obligations.value = payload.allObligations
-        transactions.value = payload.allTransactions
-        debts.value = payload.allDebts
+        months.value = payload.months
+        obligations.value = payload.obligations
+        transactions.value = payload.transactions
+        debts.value = payload.debts
         error.value = ''
         loaded.value = true
       },
       error(reason: unknown) {
         error.value = reason instanceof Error ? reason.message : 'Local database access failed.'
         loaded.value = true
+        subscription = null
       }
     })
   }
+  function stop() { subscription?.unsubscribe(); subscription = null }
+  onScopeDispose(stop)
   function setTheme(value: 'light' | 'dark') {
     theme.value = value
     try { localStorage.setItem(PREF_THEME, value) } catch { /* theme fallback remains in memory */ }
@@ -61,6 +64,6 @@ export const useFinanceStore = defineStore('finance', () => {
   return {
     months, obligations, transactions, debts, month, theme, loaded, error, notice,
     monthData, monthObligations, monthTransactions, summary, hasAnyData,
-    start, setTheme, notify, clearNotice
+    start, stop, setTheme, notify, clearNotice
   }
 })

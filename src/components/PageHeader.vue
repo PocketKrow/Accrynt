@@ -15,9 +15,9 @@ const headingId = computed(() => props.title.toLowerCase().replace(/\W+/g, '-'))
       <p v-if="subtitle" class="page-subtitle">{{ subtitle }}</p>
     </div>
     <div v-if="monthNavigation" class="month-nav" role="group" aria-label="Select month">
-      <button type="button" aria-label="Previous month" @click="store.month = shiftMonth(store.month, -1)">‹</button>
+      <button type="button" aria-label="Previous month" :disabled="store.month === '0001-01'" @click="store.month = shiftMonth(store.month, -1)">‹</button>
       <span>{{ monthLabel }}</span>
-      <button type="button" aria-label="Next month" @click="store.month = shiftMonth(store.month, 1)">›</button>
+      <button type="button" aria-label="Next month" :disabled="store.month === '9999-12'" @click="store.month = shiftMonth(store.month, 1)">›</button>
     </div>
     <slot name="actions" />
   </header>

@@ -25,6 +25,7 @@ watch(() => props.modelValue, async open => {
   if (!open && dialogElement.value?.open) dialogElement.value.close()
 }, { immediate: true })
 async function submit() {
+  if (busy.value) return
   const balanceCents = parseMoney(form.balance)
   const startingBalanceCents = form.starting ? parseMoney(form.starting) : null
   const minimumCents = parseMoney(form.minimum)
@@ -36,7 +37,7 @@ async function submit() {
   busy.value = true
   try {
     await localRepository.saveDebt({ name: form.name.trim(), balanceCents, startingBalanceCents, minimumCents,
-      aprBasisPoints: apr === null ? null : Math.round(apr * 100) }, props.record?.id)
+      aprBasisPoints: apr === null ? null : Math.round(apr * 100) }, props.record?.id, props.record?.updatedAt)
     emit('update:modelValue', false)
     store.notify(props.record ? 'Debt updated.' : 'Debt added.')
   } catch (e) { error.value = e instanceof Error ? e.message : 'Unable to save debt.' }
@@ -44,17 +45,17 @@ async function submit() {
 }
 </script>
 <template>
-  <dialog ref="dialogElement" class="modal-panel native-dialog" aria-label="Debt" @close="emit('update:modelValue', false)">
-      <div class="modal-heading"><h2>{{ record ? 'Edit debt' : 'Add a debt' }}</h2><button class="icon-button" aria-label="Close" @click="emit('update:modelValue', false)">✕</button></div>
+  <dialog ref="dialogElement" class="modal-panel native-dialog" @cancel="busy && $event.preventDefault()" aria-label="Debt" @close="emit('update:modelValue', false)">
+      <div class="modal-heading"><h2>{{ record ? 'Edit debt' : 'Add a debt' }}</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="emit('update:modelValue', false)">✕</button></div>
       <form @submit.prevent="submit">
         <label>Name<input v-model="form.name" required maxlength="100" placeholder="Personal loan, credit card…" /></label>
         <label>Current balance (USD)<input v-model="form.balance" required inputmode="decimal" placeholder="1500.00" /></label>
         <label>Starting balance (optional)<input v-model="form.starting" inputmode="decimal" placeholder="2500.00" /></label>
         <label>Minimum payment (USD)<input v-model="form.minimum" required inputmode="decimal" placeholder="45.00" /></label>
         <label>APR % (optional)<input v-model="form.apr" inputmode="decimal" placeholder="17.00" /></label>
-        <p class="form-hint">Balances are manually maintained in v0.1; no automatic interest calculation or balance reduction occurs.</p>
+        <p class="form-hint">Balances are manually maintained; no automatic interest calculation or balance reduction occurs.</p>
         <p v-if="error" class="error-message" role="alert">{{ error }}</p>
-        <div class="modal-actions"><button type="button" class="button" @click="emit('update:modelValue', false)">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save debt' }}</button></div>
+        <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="emit('update:modelValue', false)">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save debt' }}</button></div>
       </form>
   </dialog>
 </template>

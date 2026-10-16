@@ -25,12 +25,13 @@ async function remove(record: Debt) {
     <article v-for="debt in store.debts" :key="debt.id" class="panel debt-card">
       <div class="panel-heading"><div><span class="eyebrow">LIABILITY</span><h2>{{ debt.name }}</h2></div><button class="text-link" @click="open(debt)">Edit ↗</button></div>
       <div class="debt-balance mono">{{ formatMoney(debt.balanceCents) }}</div><p class="muted small-text">Current balance · manually maintained</p>
+      <p v-if="debt.startingBalanceCents !== null && debt.balanceCents > debt.startingBalanceCents" class="small-text negative-text">{{ formatMoney(debt.balanceCents - debt.startingBalanceCents) }} above starting balance</p>
       <div v-if="debtProgress(debt) !== null" class="meter-block"><div class="meter-annotation"><span>Paid off from starting balance</span><strong>{{ debtProgress(debt) }}%</strong></div><div class="small-meter"><span :style="{ width: `${debtProgress(debt)}%` }" /></div></div>
       <div class="debt-facts"><div><span>Minimum</span><strong class="mono">{{ formatMoney(debt.minimumCents) }}</strong></div><div><span>APR</span><strong class="mono">{{ debt.aprBasisPoints === null ? '—' : (debt.aprBasisPoints / 100).toFixed(2) + '%' }}</strong></div></div>
       <button class="text-link danger-link" @click="remove(debt)">Delete debt</button>
     </article>
-    <article v-if="!store.debts.length" class="panel empty-panel"><strong>No tracked debt accounts</strong><p>Add a credit card or loan balance when you're ready. October's planned debt payments are already tracked separately in the Monthly Plan.</p></article>
+    <article v-if="!store.debts.length" class="panel empty-panel"><strong>No tracked debt accounts</strong><p>Add a credit card or loan balance when you're ready. Planned debt payments are tracked separately in the Monthly Plan.</p></article>
   </div>
-  <p class="fine-print">Debt records and planned monthly payments are linked only when you select a debt on an obligation. Balances never decrement automatically in v0.1.</p>
+  <p class="fine-print">Debt records and planned monthly payments are linked only when you select a debt on an obligation. Balances never decrement automatically.</p>
   <DebtForm v-model="editor" :record="editing" />
 </template>

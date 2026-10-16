@@ -5,10 +5,11 @@ const money = z.number().int().min(0).max(999_999_999_99)
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
   const [year, month, day] = value.split('-').map(Number)
   if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return false
-  const actual = new Date(Date.UTC(year, month - 1, day))
+  const actual = new Date(0)
+  actual.setUTCFullYear(year, month - 1, day)
   return actual.getUTCFullYear() === year && actual.getUTCMonth() === month - 1 && actual.getUTCDate() === day
 }, 'Invalid calendar date')
-export const monthKeySchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+export const monthKeySchema = z.string().regex(/^(?!0000)\d{4}-(0[1-9]|1[0-2])$/)
 export const categorySchema = z.enum(['Housing', 'Utilities', 'Insurance', 'Subscriptions', 'Debt payments', 'Groceries', 'Transport', 'Healthcare', 'Other'])
 export type Category = z.infer<typeof categorySchema>
 

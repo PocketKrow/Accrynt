@@ -1,13 +1,14 @@
 import type { Obligation, Transaction, Debt } from './models'
-import { transactionMonth } from './models'
+import { monthKeySchema, transactionMonth } from './models'
 
 export const formatMoney = (cents: number) => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD'
 }).format(cents / 100)
 
 export function parseMoney(value: string): number | null {
-  const cleaned = value.trim().replace(/,/g, '')
-  if (!/^\d{1,9}(?:\.\d{1,2})?$/.test(cleaned)) return null
+  const input = value.trim()
+  if (!/^(?:\d{1,9}|\d{1,3}(?:,\d{3}){1,2})(?:\.\d{1,2})?$/.test(input)) return null
+  const cleaned = input.replace(/,/g, '')
   const [dollars, decimals = ''] = cleaned.split('.')
   const cents = Number(dollars) * 100 + Number(decimals.padEnd(2, '0'))
   return Number.isSafeInteger(cents) && cents <= 999_999_999_99 ? cents : null
@@ -37,12 +38,21 @@ export function debtProgress(debt: Debt) {
   return Math.max(0, Math.min(100, Math.round((1 - debt.balanceCents / debt.startingBalanceCents) * 100)))
 }
 export function shiftMonth(key: string, amount: number) {
+  monthKeySchema.parse(key)
+  if (!Number.isInteger(amount)) throw new Error('Month offset must be an integer.')
   const [year, month] = key.split('-').map(Number)
-  const date = new Date(Date.UTC(year, month - 1 + amount, 1))
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
+  const date = new Date(0)
+  date.setUTCFullYear(year, month - 1 + amount, 1)
+  if (!Number.isFinite(date.getTime()) || date.getUTCFullYear() < 1 || date.getUTCFullYear() > 9999) {
+    throw new Error('Choose a month between January 0001 and December 9999.')
+  }
+  return `${String(date.getUTCFullYear()).padStart(4, '0')}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
 }
 export function longMonth(key: string) {
+  monthKeySchema.parse(key)
   const [year, month] = key.split('-').map(Number)
+  const date = new Date(0)
+  date.setUTCFullYear(year, month - 1, 1)
   return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-    .format(new Date(Date.UTC(year, month - 1, 1)))
+    .format(date)
 }
