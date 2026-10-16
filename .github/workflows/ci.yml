@@ -22,9 +22,9 @@ jobs:
       - run: npx playwright install --with-deps chromium firefox
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: playwright-failure-evidence
+          name: playwright-review-evidence
           path: |
             playwright-report/
             test-results/

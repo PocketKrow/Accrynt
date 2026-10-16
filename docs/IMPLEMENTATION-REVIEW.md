@@ -30,3 +30,11 @@ No Dexie/portable schema bump. Historical versions 1–3 unchanged. `accrynt-loc
 Actual totals and obligation statuses use ledger entries dated through today. Future linked outflow is scheduled coverage; it continues to reserve money until dated. Partial actual payments remain Partial even when more is scheduled. Manual paid confirmation stays independent and does not synthesize outflow. Cross-month actual payment links settle their obligation only when the payment date is reached.
 
 Demo fixture has six synthetic months, six debts, recurring expected income, recorded income, partial/overdue/scheduled/manual payments, a skipped occurrence, and a reversible split receipt. Foundation uses 6.12% for the installment sample because v3 cannot store 6.125% exactly; the precise migration must update the fixture. No automatic interest posting. Scenarios reset the sandbox after explicit confirmation; missing and zero APR are present in every scenario.
+
+## Workbench slice
+
+Adds a third Overview context column, adaptive debt cards, sticky independently scrolling right rail, all-time Ledger search/type filtering, selectable receipt inspector, formula-safe CSV export and 3/6/12-month recorded-history charts with exact tables. Missing actual history is unknown, never fabricated zero. Scheduled entries stay visible in the Ledger but are excluded from actual totals and category reports until their date.
+
+Regression matrix covers all six routes, both themes and 320/768/1280/1440/1920/2560/3840 widths. Desktop rail stays right; three debt cards share a row at 1920+. Captures 24 screenshots per browser at 320 and 1440, attached to the Playwright report. CI now retains review evidence on success too. Visual inspection of the 24 Chromium captures completed. The dense recurring income action row exposed a real 320px overflow; wrapping fixed it.
+
+Workbench checks: 112 unit tests pass, typecheck/build pass; new reporting/CSV/viewport tests pass on Chromium and Firefox. Firefox requires `MOZ_DISABLE_CONTENT_SANDBOX=1 MOZ_DISABLE_RDD_SANDBOX=1` in this root container; those settings are only applied to local disposable test processes, not shipped to the app or CI.
