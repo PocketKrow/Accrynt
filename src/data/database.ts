@@ -7,14 +7,18 @@ export class AccryntDatabase extends Dexie {
   transactions!: Table<Transaction, string>
   debts!: Table<Debt, string>
 
-  constructor() {
-    super('accrynt-local-v1')
-    this.version(1).stores({
+  constructor(name = 'accrynt-local-v1') {
+    super(name)
+    const tables = {
       months: 'key',
       obligations: 'id,month,category,paidAt,debtId',
       transactions: 'id,date,kind,category,obligationId',
       debts: 'id'
-    })
+    }
+    this.version(1).stores(tables)
+    this.version(2).stores(tables).upgrade(tx => tx.table('debts').toCollection().modify(debt => {
+      debt.monthlyPaymentCents = null
+    }))
   }
 }
 export const db = new AccryntDatabase()

@@ -69,7 +69,7 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
             <div class="rail-row"><span>Planned outflow</span><strong class="mono">{{ formatMoney(store.summary.plannedCents) }}</strong></div>
             <div class="rail-row"><span>Unpaid items</span><strong class="mono">{{ store.summary.unpaidCount }}</strong></div>
           </div>
-          <div class="rail-footer"><span class="dot" /> PRIVATE BY DESIGN <span class="mono">v0.2</span></div>
+          <div class="rail-footer"><span class="dot" /> PRIVATE BY DESIGN <span class="mono">v0.3</span></div>
         </aside>
       </div>
     </div>

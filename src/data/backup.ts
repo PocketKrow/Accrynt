@@ -1,15 +1,15 @@
 import { db, readWorkspace } from './database'
-import { backupSchema, now, type Backup } from '../domain/models'
+import { portableBackupSchema, now, type Backup } from '../domain/models'
 
 export async function exportBackup(): Promise<Backup> {
   const data: Backup = {
-    format: 'accrynt-portable', schemaVersion: 1, exportedAt: now(),
+    format: 'accrynt-portable', schemaVersion: 2, exportedAt: now(),
     ...await readWorkspace()
   }
   return validateBackup(data)
 }
 export function validateBackup(content: unknown): Backup {
-  const data = backupSchema.parse(content)
+  const data = portableBackupSchema.parse(content)
   const unique = (label: string, ids: string[]) => {
     if (new Set(ids).size !== ids.length) throw new Error(`Backup has duplicate ${label} IDs.`)
   }

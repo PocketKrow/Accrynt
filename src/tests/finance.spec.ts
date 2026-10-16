@@ -40,7 +40,7 @@ describe('monthly financial totals', () => {
 describe('dates and debt progress', () => {
   it('shifts December into January', () => expect(shiftMonth('2026-12', 1)).toBe('2027-01'))
   it('avoids inventing progress without a starting balance', () => {
-    const debt: Debt = { id: crypto.randomUUID(), name: 'Loan', balanceCents: 50000, startingBalanceCents: null, minimumCents: 3000, aprBasisPoints: null, updatedAt: new Date().toISOString() }
+    const debt: Debt = { id: crypto.randomUUID(), name: 'Loan', balanceCents: 50000, startingBalanceCents: null, minimumCents: 3000, monthlyPaymentCents: null, aprBasisPoints: null, updatedAt: new Date().toISOString() }
     expect(debtProgress(debt)).toBeNull()
     expect(debtProgress({ ...debt, startingBalanceCents: 100000 })).toBe(50)
   })
