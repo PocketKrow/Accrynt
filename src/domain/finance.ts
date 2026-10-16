@@ -1,5 +1,5 @@
 import type { Obligation, Transaction, Debt } from './models'
-import { monthKeySchema, transactionMonth } from './models'
+import { localDate, monthKeySchema, transactionMonth } from './models'
 
 export const formatMoney = (cents: number) => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD'
@@ -20,11 +20,12 @@ export function parseSignedMoney(value: string): number | null {
   const cents = parseMoney(negative ? input.slice(1) : input)
   return cents === null ? null : negative ? -cents : cents
 }
-export function obligationPayment(obligation: Obligation, transactions: Transaction[], through = '9999-12-31') {
+export function obligationPayment(obligation: Obligation, transactions: Transaction[], through = localDate()) {
   const recordedCents = sum(transactions.filter(t => t.obligationId === obligation.id && t.kind !== 'income' && t.date <= through).map(t => t.amountCents))
   const remainingCents = obligation.paidAt ? 0 : Math.max(0, obligation.plannedCents - recordedCents)
   const paid = obligation.paidAt !== null || (recordedCents >= obligation.plannedCents && (recordedCents > 0 || obligation.plannedCents === 0))
-  return { recordedCents, remainingCents, paid, status: paid ? 'Paid' : recordedCents > 0 ? 'Partial' : 'Unpaid' }
+  const scheduledCents = sum(transactions.filter(t => t.obligationId === obligation.id && t.kind !== 'income' && t.date > through).map(t => t.amountCents))
+  return { recordedCents, scheduledCents, remainingCents, paid, status: paid ? 'Paid' : recordedCents > 0 ? 'Partial' : scheduledCents > 0 ? 'Scheduled' : 'Unpaid' }
 }
 export function dueDate(month: string, day: number): string {
   monthKeySchema.parse(month)
@@ -42,11 +43,11 @@ export function availableMoney(month: string, openingCents: number | null, oblig
   return { receivedCents, spentCents, outstandingCents, trackedCents,
     afterBillsCents: trackedCents === null ? null : trackedCents - outstandingCents }
 }
-export function monthlySummary(month: string, incomeCents: number, obligations: Obligation[], transactions: Transaction[]) {
+export function monthlySummary(month: string, incomeCents: number, obligations: Obligation[], transactions: Transaction[], through = localDate()) {
   const planned = obligations.filter(o => o.month === month)
-  const actual = transactions.filter(t => transactionMonth(t.date) === month)
+  const actual = transactions.filter(t => transactionMonth(t.date) === month && t.date <= through)
   const plannedCents = sum(planned.map(o => o.plannedCents))
-  const paidCount = planned.filter(o => obligationPayment(o, transactions).paid).length
+  const paidCount = planned.filter(o => obligationPayment(o, transactions, through).paid).length
   const actualIncomeCents = sum(actual.filter(t => t.kind === 'income').map(t => t.amountCents))
   const actualOutflowCents = sum(actual.filter(t => t.kind !== 'income').map(t => t.amountCents))
   return {
@@ -62,7 +63,9 @@ export function monthlySummary(month: string, incomeCents: number, obligations: 
 }
 export function debtProgress(debt: Debt) {
   if (!debt.startingBalanceCents || debt.startingBalanceCents <= 0) return null
-  return Math.max(0, Math.min(100, Math.round((1 - debt.balanceCents / debt.startingBalanceCents) * 100)))
+  const start = BigInt(debt.startingBalanceCents), repaid = start - BigInt(debt.balanceCents)
+  const percent = Number((repaid * 200n + start) / (2n * start))
+  return Math.max(0, Math.min(debt.balanceCents === 0 ? 100 : 99, percent))
 }
 export function shiftMonth(key: string, amount: number) {
   monthKeySchema.parse(key)

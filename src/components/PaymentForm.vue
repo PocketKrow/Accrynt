@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorMessage } from '../domain/errors'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { localRepository } from '../data/repository'
 import { monthlyInterest } from '../domain/debt'
@@ -15,40 +16,53 @@ const debtSnapshot = ref<Debt | null>(null), billSnapshot = ref<Obligation | nul
 const form = reactive({ debtId: '', obligationId: '', date: '', name: '', amount: '', interest: '', account: '' })
 const interestIncludedInBalance = ref(false)
 const choices = computed(() => store.obligations.filter(o => o.debtId === (form.debtId || null)))
-function capture() {
-  interestIncludedInBalance.value = false
+// Refresh version snapshots without overwriting a draft the user is typing.
+const edited = reactive({ name: false, amount: false, interest: false })
+let initializing = false
+function capture(seed = false, debtChanged = false) {
   debtSnapshot.value = store.debts.find(d => d.id === form.debtId) ?? null
   billSnapshot.value = store.obligations.find(o => o.id === form.obligationId) ?? null
   const debt = debtSnapshot.value, bill = billSnapshot.value
   const interest = debt?.aprBasisPoints == null ? null : monthlyInterest(debt.balanceCents, debt.aprBasisPoints)
-  const planned = bill ? obligationPayment(bill, store.transactions).remainingCents : debt ? debt.monthlyPaymentCents ?? debt.minimumCents : 0
-  const amount = debt ? Math.min(planned, debt.balanceCents + (interest ?? 0)) : planned
-  form.amount = (amount / 100).toFixed(2)
-  form.interest = debt ? interest === null ? '' : (interest / 100).toFixed(2) : '0.00'
-  form.name = `Payment · ${bill?.name ?? debt?.name ?? ''}`.slice(0, 100)
+  const planned = bill ? obligationPayment(bill, store.transactions, store.today).remainingCents : debt ? debt.monthlyPaymentCents ?? debt.minimumCents : 0
+  const max = debt ? debt.balanceCents + (interestIncludedInBalance.value ? 0 : interest ?? 0) : planned
+  if (seed || !edited.amount) form.amount = (Math.min(planned, max) / 100).toFixed(2)
+  if (seed || debtChanged || !edited.interest) form.interest = debt ? interest === null ? '' : (interest / 100).toFixed(2) : '0.00'
+  if (seed || !edited.name) form.name = `Payment · ${bill?.name ?? debt?.name ?? ''}`.slice(0, 100)
 }
-watch(() => form.debtId, () => {
+watch(() => form.debtId, (value, previous) => {
+  if (initializing || !props.modelValue) return
   if (!choices.value.some(o => o.id === form.obligationId)) form.obligationId = ''
-  capture()
-})
-watch(() => form.obligationId, capture)
+  // A split belongs to one debt. A different debt needs a fresh interest review.
+  if (value !== previous) {
+    interestIncludedInBalance.value = false; edited.interest = false
+    error.value = 'Debt changed. Review the refreshed interest and payment split before confirming.'
+  }
+  capture(false, value !== previous)
+}, { flush: 'sync' })
+watch(() => form.obligationId, () => { if (!initializing && props.modelValue) capture() }, { flush: 'sync' })
+watch(interestIncludedInBalance, () => { if (!initializing && props.modelValue && !edited.amount) capture() })
 watch(() => props.modelValue, async open => {
   if (open) {
+    initializing = true
     requestId.value = newId(); error.value = ''
+    edited.name = edited.amount = edited.interest = false
+    interestIncludedInBalance.value = false
     form.debtId = props.obligation?.debtId ?? props.debt?.id ?? ''
     form.obligationId = props.obligation?.id ?? ''
     form.date = store.month < localDate().slice(0, 7) ? `${store.month}-01` : localDate()
-    form.account = ''; capture()
+    form.account = ''; capture(true)
+    initializing = false
   }
   await nextTick()
-  if (open && !dialog.value?.open) dialog.value?.showModal()
+  if (open && !dialog.value?.open) (dialog.value?.showModal(), dialog.value?.querySelector<HTMLSelectElement>('select')?.focus())
   if (!open && dialog.value?.open) dialog.value.close()
 }, { immediate: true })
 const preview = computed(() => {
   const amount = parseMoney(form.amount), interest = debtSnapshot.value ? parseMoney(form.interest) : 0
   if (amount === null || amount <= 0 || interest === null) return { error: 'Enter a payment and the interest paid (0 when appropriate).', split: null }
   try { return { error: '', split: debtSnapshot.value ? paymentSplit(debtSnapshot.value.balanceCents, amount, interest, interestIncludedInBalance.value) : null } }
-  catch (reason) { return { error: reason instanceof Error ? reason.message : 'Check the split.', split: null } }
+  catch (reason) { return { error: errorMessage(reason, 'Check the split.'), split: null } }
 })
 async function submit() {
   if (busy.value) return
@@ -62,7 +76,7 @@ async function submit() {
       expectedDebtUpdatedAt: debtSnapshot.value?.updatedAt, expectedObligationUpdatedAt: billSnapshot.value?.updatedAt,
       interestIncludedInBalance: interestIncludedInBalance.value })
     emit('update:modelValue', false); store.notify('Payment recorded. Ledger, debt balance, and linked bill status updated.')
-  } catch (reason) { error.value = reason instanceof Error ? reason.message : 'Unable to record payment.' }
+  } catch (reason) { error.value = errorMessage(reason, 'Unable to record payment.') }
   finally { busy.value = false }
 }
 </script>
@@ -73,11 +87,11 @@ async function submit() {
       <label>Debt<select v-model="form.debtId"><option value="">Bill only · no debt balance change</option><option v-for="item in store.debts" :key="item.id" :value="item.id">{{ item.name }}</option></select></label>
       <label>Related obligation<select v-model="form.obligationId"><option value="">No obligation</option><option v-for="item in choices" :key="item.id" :value="item.id">{{ item.name }} · {{ item.month }}</option></select></label>
       <label>Payment date<input v-model="form.date" required type="date" :max="localDate()" /></label>
-      <label>Description<input v-model="form.name" required minlength="2" maxlength="100" /></label>
-      <label>Payment amount (USD)<input v-model="form.amount" inputmode="decimal" required /></label>
+      <label>Description<input v-model="form.name" @input="edited.name = true" required minlength="2" maxlength="100" /></label>
+      <label>Payment amount (USD)<input v-model="form.amount" @input="edited.amount = true" inputmode="decimal" required /></label>
       <template v-if="debtSnapshot">
-        <label>Interest included in payment (USD)<input v-model="form.interest" inputmode="decimal" required aria-describedby="payment-interest-hint" /></label>
-        <p id="payment-interest-hint" class="form-hint">Prefilled from the monthly estimate when a rate is available. Check your statement and adjust the actual interest paid. Unpaid interest and fees are not added automatically.</p>
+        <label>Interest included in payment (USD)<input v-model="form.interest" @input="edited.interest = true" inputmode="decimal" required aria-describedby="payment-interest-hint" /></label>
+        <p id="payment-interest-hint" class="form-hint">Prefilled from the monthly estimate when a rate is available. Check your statement and adjust the actual interest paid. A second payment in the same cycle does not imply a second full month of interest. Unpaid interest and fees are not added automatically.</p>
         <label class="checkbox-inline"><input v-model="interestIncludedInBalance" type="checkbox" /> Interest is already included in saved balance</label>
         <p class="form-hint">Check for a statement balance that includes this interest: the full payment reduces that balance. Otherwise, only principal reduces the saved balance. Review the result below.</p>
       </template>

@@ -1,3 +1,4 @@
+import { databaseName } from './workspace'
 import Dexie, { type Table } from 'dexie'
 import type { MonthPlan, Obligation, Transaction, Debt, RecurringRule, RecurringOccurrence } from '../domain/models'
 
@@ -27,7 +28,7 @@ export class AccryntDatabase extends Dexie {
     })
   }
 }
-export const db = new AccryntDatabase()
+export const db = new AccryntDatabase(databaseName)
 
 // A single snapshot keeps UI totals and portable backups consistent across tabs.
 export function readWorkspace() {

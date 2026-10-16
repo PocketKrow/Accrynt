@@ -26,7 +26,7 @@ describe('monthly financial totals', () => {
     const obligations = [obligation({ paidAt: new Date().toISOString() }), obligation({ plannedCents: 3400 })]
     const transactions = [transaction(), transaction({ kind: 'debt-payment', category: 'Debt payments', amountCents: 3400 }),
       transaction({ kind: 'income', category: 'Other', amountCents: 182200 })]
-    const result = monthlySummary('2026-10', 182200, obligations, transactions)
+    const result = monthlySummary('2026-10', 182200, obligations, transactions, '2026-10-16')
     expect(result.plannedCents).toBe(11200)
     expect(result.remainingCents).toBe(171000)
     expect(result.paidCount).toBe(1)

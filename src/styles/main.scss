@@ -235,3 +235,9 @@ input,select{min-width:0}
 
 .native-dialog{position:fixed;margin:auto;inset:0;max-width:min(470px,calc(100vw - 30px));max-height:min(95vh,800px);background:var(--surface);color:var(--ink)}
 .native-dialog::backdrop{background:#051014bf}
+
+/* Workspace identity and keyboard access remain visible in both themes. */
+.demo-banner{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px;margin-bottom:14px;border:1px solid var(--accent);background:var(--surface);font-size:12px}
+.demo-banner label{display:flex;align-items:center;gap:8px}.demo-banner select{max-width:160px;padding:6px}
+.right-rail :focus-visible{outline:2px solid #b4eff7;outline-offset:3px}
+.rail-negative{color:#ffb4ab}

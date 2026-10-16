@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorMessage } from '../domain/errors'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { localRepository } from '../data/repository'
 import { formatMoney, parseMoney, dueDate } from '../domain/finance'
@@ -48,16 +49,16 @@ async function submit() {
       startMonth: form.start, endMonth: form.end || null, enabled: form.enabled }, editing.value?.id, editing.value?.updatedAt,
       sourceBill.value ? { id: sourceBill.value.id, expectedUpdatedAt: sourceBill.value.updatedAt } : undefined)
     open.value = false; store.notify(occurrence.value ? 'Expected income updated for this month.' : 'Recurring item saved. Existing monthly entries stay unchanged.')
-  } catch (reason) { error.value = reason instanceof Error ? reason.message : 'Unable to save recurring item.' }
+  } catch (reason) { error.value = errorMessage(reason, 'Unable to save recurring item.') }
   finally { busy.value = false }
 }
 async function toggleRule(rule: RecurringRule) {
   try { await localRepository.saveRecurringRule({ ...rule, enabled: !rule.enabled }, rule.id, rule.updatedAt) }
-  catch (reason) { store.notify(reason instanceof Error ? reason.message : 'Unable to change recurring item.') }
+  catch (reason) { store.notify(errorMessage(reason, 'Unable to change recurring item.')) }
 }
 async function skip(entry: RecurringOccurrence) {
   try { await localRepository.saveExpectedOccurrence(entry.id, entry.amountCents, entry.dueDay, !entry.cancelled, entry.updatedAt) }
-  catch (reason) { store.notify(reason instanceof Error ? reason.message : 'Unable to update expected income.') }
+  catch (reason) { store.notify(errorMessage(reason, 'Unable to update expected income.')) }
 }
 function receive(entry: RecurringOccurrence) { receiptSeed.value = { name: entry.name, amountCents: entry.amountCents, kind: 'income' }; receiptOpen.value = true }
 </script>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorMessage } from '../domain/errors'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { localRepository } from '../data/repository'
 import { parseMoney } from '../domain/finance'
@@ -42,7 +43,7 @@ async function submit() {
       amountCents, account: form.account.trim(), obligationId: form.kind === 'income' ? null : form.obligationId || null }, props.record?.id, props.record?.updatedAt)
     emit('update:modelValue', false)
     store.notify(props.record ? 'Transaction updated.' : 'Transaction recorded.')
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Unable to save transaction.' }
+  } catch (e) { error.value = errorMessage(e, 'Unable to save transaction.') }
   finally { busy.value = false }
 }
 </script>

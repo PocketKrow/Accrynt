@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorMessage } from '../domain/errors'
 import { computed, ref, watch } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ObligationForm from '../components/ObligationForm.vue'
@@ -14,8 +15,8 @@ const editing = ref<Obligation | null>(null)
 const paymentOpen = ref(false), paying = ref<Obligation | null>(null)
 const recurringPanel = ref<InstanceType<typeof RecurringPanel> | null>(null)
 const isRecurring = (row: Obligation) => store.recurringOccurrences.some(r => r.obligationId === row.id)
-const state = (row: Obligation) => obligationPayment(row, store.transactions)
-const canCopy = computed(() => !store.monthData && store.monthObligations.every(o => store.recurringOccurrences.some(r => r.obligationId === o.id)))
+const state = (row: Obligation) => obligationPayment(row, store.transactions, store.today)
+const canCopy = computed(() => store.monthObligations.every(o => store.recurringOccurrences.some(r => r.obligationId === o.id)))
 function pay(row: Obligation) { paying.value = row; paymentOpen.value = true }
 const query = ref('')
 const filter = ref<'all' | 'paid' | 'unpaid'>('all')
@@ -34,22 +35,22 @@ async function saveIncome() {
   if (cents === null) { store.notify('Enter a valid income amount.'); return }
   busy.value = true
   try { await localRepository.saveIncome(targetMonth, cents); editingIncome.value = false; store.notify('Expected income saved.') }
-  catch (e) { store.notify(e instanceof Error ? e.message : 'Unable to save income.') }
+  catch (e) { store.notify(errorMessage(e, 'Unable to save income.')) }
   finally { busy.value = false }
 }
 async function toggle(record: Obligation) {
   try { await localRepository.setObligationPaid(record.id, !record.paidAt) }
-  catch (e) { store.notify(e instanceof Error ? e.message : 'Unable to update status.') }
+  catch (e) { store.notify(errorMessage(e, 'Unable to update status.')) }
 }
 async function remove(record: Obligation) {
   if (!confirm(`Delete ${record.name} from ${store.month}? Linked ledger entries will stay, but their plan links will be removed.`)) return
   try { await localRepository.deleteObligation(record.id); store.notify('Obligation deleted.') }
-  catch (e) { store.notify(e instanceof Error ? e.message : 'Unable to delete.') }
+  catch (e) { store.notify(errorMessage(e, 'Unable to delete.')) }
 }
 async function copyPrevious() {
-  if (!confirm('Copy the previous month’s additional expected income and non-recurring obligations? Paid statuses reset. Recurring items are generated separately.')) return
-  try { await localRepository.copyPreviousMonth(store.month); store.notify('Previous plan copied.') }
-  catch (e) { store.notify(e instanceof Error ? e.message : 'Cannot copy previous month.') }
+  if (!confirm('Copy the previous month’s non-recurring obligations and additional income? Existing nonzero additional income and opening cash are kept. Paid statuses reset. Recurring items are generated separately.')) return
+  try { await localRepository.copyPreviousMonth(store.month); store.notify('Previous plan copied. Opening cash and existing nonzero additional income were preserved.') }
+  catch (e) { store.notify(errorMessage(e, 'Cannot copy previous month.')) }
 }
 </script>
 <template>

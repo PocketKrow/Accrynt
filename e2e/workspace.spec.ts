@@ -104,13 +104,13 @@ test('backup restore roundtrips records; invalid input and cancelled deletion pr
   }
   page.on('dialog', confirmClear)
   await page.getByRole('button', { name: 'Delete all local records' }).click()
-  await expect(page.getByRole('button', { name: 'Load optional October example' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Load selected-month example' })).toBeVisible()
   page.off('dialog', confirmClear)
   await file.setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) })
   await expect(page.getByText('Validated backup:', { exact: false })).toBeVisible()
   page.once('dialog', dialog => dialog.accept())
   await page.getByRole('button', { name: 'Replace local records' }).click()
-  await expect(page.getByRole('button', { name: 'Load optional October example' })).not.toBeVisible()
+  await expect(page.getByRole('button', { name: 'Load selected-month example' })).not.toBeVisible()
   expect((await exportData(page)).obligations).toEqual(backup.obligations)
 })
 

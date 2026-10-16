@@ -35,7 +35,7 @@ describe('repository integrity', () => {
     const state = await readWorkspace()
     expect(state.transactions).toHaveLength(1)
     expect(state.debts[0].balanceCents).toBe(10000)
-    expect(monthlySummary('2026-12', 50000, state.obligations, state.transactions)).toMatchObject({
+    expect(monthlySummary('2026-12', 50000, state.obligations, state.transactions, '2026-12-31')).toMatchObject({
       plannedCents: 2000, remainingCents: 48000, actualOutflowCents: 1800, paidCount: 1
     })
   })
