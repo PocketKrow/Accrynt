@@ -18,3 +18,22 @@ export class AccryntDatabase extends Dexie {
   }
 }
 export const db = new AccryntDatabase()
+
+// A single snapshot keeps UI totals and portable backups consistent across tabs.
+export function readWorkspace() {
+  return db.transaction('r', db.months, db.obligations, db.transactions, db.debts, async () => ({
+    months: await db.months.toArray(),
+    obligations: await db.obligations.toArray(),
+    transactions: await db.transactions.toArray(),
+    debts: await db.debts.toArray()
+  }))
+}
+
+export function clearWorkspace() {
+  return db.transaction('rw', db.months, db.obligations, db.transactions, db.debts, async () => {
+    await db.months.clear()
+    await db.obligations.clear()
+    await db.transactions.clear()
+    await db.debts.clear()
+  })
+}

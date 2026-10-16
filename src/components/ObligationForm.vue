@@ -28,6 +28,7 @@ watch(() => props.modelValue, async open => {
   if (!open && dialogElement.value?.open) dialogElement.value.close()
 }, { immediate: true })
 async function submit() {
+  if (busy.value) return
   const cents = parseMoney(form.amount)
   const dueDay = form.dueDay ? Number(form.dueDay) : null
   if (cents === null || form.name.trim().length < 2 || (dueDay !== null && (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31))) {
@@ -39,7 +40,7 @@ async function submit() {
       month: props.record?.month ?? store.month,
       name: form.name.trim(), plannedCents: cents, category: form.category,
       dueDay, debtId: form.debtId || null, paidAt: props.record?.paidAt ?? null
-    }, props.record?.id)
+    }, props.record?.id, props.record?.updatedAt)
     emit('update:modelValue', false)
     store.notify(props.record ? 'Obligation updated.' : 'Obligation added.')
   } catch (e) { error.value = e instanceof Error ? e.message : 'Unable to save obligation.' }
@@ -47,8 +48,8 @@ async function submit() {
 }
 </script>
 <template>
-  <dialog ref="dialogElement" class="modal-panel native-dialog" :aria-label="heading" @close="emit('update:modelValue', false)">
-      <div class="modal-heading"><h2>{{ heading }}</h2><button class="icon-button" aria-label="Close" @click="emit('update:modelValue', false)">✕</button></div>
+  <dialog ref="dialogElement" class="modal-panel native-dialog" @cancel="busy && $event.preventDefault()" :aria-label="heading" @close="emit('update:modelValue', false)">
+      <div class="modal-heading"><h2>{{ heading }}</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="emit('update:modelValue', false)">✕</button></div>
       <form @submit.prevent="submit">
         <label>Obligation name<input v-model="form.name" required maxlength="100" autofocus placeholder="Internet, electricity, loan payment…" /></label>
         <label>Planned amount (USD)<input v-model="form.amount" required inputmode="decimal" placeholder="85.00" /></label>
@@ -59,7 +60,7 @@ async function submit() {
         </label>
         <p class="form-hint">Checking this obligation as paid does not create a ledger transaction. Record actual money movement separately.</p>
         <p v-if="error" class="error-message" role="alert">{{ error }}</p>
-        <div class="modal-actions"><button type="button" class="button" @click="emit('update:modelValue', false)">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save obligation' }}</button></div>
+        <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="emit('update:modelValue', false)">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save obligation' }}</button></div>
       </form>
   </dialog>
 </template>

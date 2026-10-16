@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 import BrandMark from './components/BrandMark.vue'
@@ -28,6 +28,7 @@ watch(() => store.notice, message => {
   if (noticeTimer) clearTimeout(noticeTimer)
   if (message) noticeTimer = setTimeout(store.clearNotice, 4500)
 })
+onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
 </script>
 <template>
   <div class="app-root" :data-theme="store.theme">
@@ -48,7 +49,7 @@ watch(() => store.notice, message => {
             </div>
           </div>
           <div v-if="!store.loaded" class="loading-state" role="status">Opening local workspace…</div>
-          <section v-else-if="store.error" class="error-panel" role="alert"><strong>Local storage unavailable</strong><p>{{ store.error }}</p><p>Use a supported browser with IndexedDB enabled. No data has been sent anywhere.</p></section>
+          <section v-else-if="store.error" class="error-panel" role="alert"><strong>Local storage unavailable</strong><p>{{ store.error }}</p><p>Use a supported browser with IndexedDB enabled. No data has been sent anywhere.</p><button class="button" @click="store.start()">Retry local storage</button></section>
           <RouterView v-else />
         </main>
         <aside id="main-navigation" class="right-rail" :class="{ open: sidebarOpen }">
@@ -68,7 +69,7 @@ watch(() => store.notice, message => {
             <div class="rail-row"><span>Planned outflow</span><strong class="mono">{{ formatMoney(store.summary.plannedCents) }}</strong></div>
             <div class="rail-row"><span>Unpaid items</span><strong class="mono">{{ store.summary.unpaidCount }}</strong></div>
           </div>
-          <div class="rail-footer"><span class="dot" /> PRIVATE BY DESIGN <span class="mono">v0.1</span></div>
+          <div class="rail-footer"><span class="dot" /> PRIVATE BY DESIGN <span class="mono">v0.2</span></div>
         </aside>
       </div>
     </div>

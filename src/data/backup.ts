@@ -1,15 +1,12 @@
-import { db } from './database'
+import { db, readWorkspace } from './database'
 import { backupSchema, now, type Backup } from '../domain/models'
 
 export async function exportBackup(): Promise<Backup> {
   const data: Backup = {
     format: 'accrynt-portable', schemaVersion: 1, exportedAt: now(),
-    months: await db.months.toArray(),
-    obligations: await db.obligations.toArray(),
-    transactions: await db.transactions.toArray(),
-    debts: await db.debts.toArray()
+    ...await readWorkspace()
   }
-  return backupSchema.parse(data)
+  return validateBackup(data)
 }
 export function validateBackup(content: unknown): Backup {
   const data = backupSchema.parse(content)
@@ -30,7 +27,9 @@ export function validateBackup(content: unknown): Backup {
   }
   return data
 }
-export async function restoreBackup(data: Backup) {
+export async function restoreBackup(content: unknown) {
+  // Validate here too: callers must never be able to clear data with an invalid payload.
+  const data = validateBackup(content)
   // Atomic replacement: either all tables restore or none do.
   await db.transaction('rw', db.months, db.obligations, db.transactions, db.debts, async () => {
     await Promise.all([db.months.clear(), db.obligations.clear(), db.transactions.clear(), db.debts.clear()])

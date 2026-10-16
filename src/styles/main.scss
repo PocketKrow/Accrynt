@@ -11,7 +11,7 @@ input,select{min-width:0}
 .mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
 .app-root{
   --canvas:#e6e9eb;--page:#edf0f1;--surface:#f8f9f9;--surface2:#f1f3f4;--ink:#1c262b;
-  --muted:#55666e;--faint:#6e8088;--line:#cad2d6;--line-strong:#9eabb1;
+  --muted:#55666e;--faint:#5b6c74;--line:#cad2d6;--line-strong:#9eabb1;
   --accent:#08687c;--accent-soft:#d9ecef;--on-accent:#fff;--good:#216e53;--bad:#aa404c;
   --rail:#171d21;--rail-text:#edf3f4;--rail-muted:#a3b4ba;--rail-line:#37434a;
   --hero:#182125;--hero-text:#f0f5f5;--track:#dee5e7;
@@ -64,7 +64,7 @@ input,select{min-width:0}
 .metric-detail{font-size:10px;color:var(--muted);line-height:1.5;margin:0}
 .dashboard-grid{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(270px,.88fr);gap:11px;align-items:start}
 .panel,.feature-panel{background:var(--surface);border:1px solid var(--line);min-width:0;padding:18px}
-.feature-panel{background:var(--hero);color:var(--hero-text);border-color:var(--hero);min-height:335px}
+.feature-panel{--accent:#87d9e3;background:var(--hero);color:var(--hero-text);border-color:var(--hero);min-height:335px}
 .feature-panel .eyebrow{color:var(--accent)}
 .feature-panel .text-link{color:#8cdee7}
 .feature-panel .muted,.feature-panel .empty-copy{color:#b2c1c5}

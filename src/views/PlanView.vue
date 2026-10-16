@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ObligationForm from '../components/ObligationForm.vue'
 import { useFinanceStore } from '../stores/finance'
@@ -14,15 +14,18 @@ const filter = ref<'all' | 'paid' | 'unpaid'>('all')
 const incomeDraft = ref('')
 const editingIncome = ref(false)
 const busy = ref(false)
+watch(() => store.month, () => { editingIncome.value = false; incomeDraft.value = '' })
 const rows = computed(() => store.monthObligations.filter(r => r.name.toLowerCase().includes(query.value.toLowerCase()) &&
   (filter.value === 'all' || (filter.value === 'paid' ? !!r.paidAt : !r.paidAt))))
 function openForm(record: Obligation | null = null) { editing.value = record; editorOpen.value = true }
 function startIncome() { incomeDraft.value = ((store.monthData?.incomeCents ?? 0) / 100).toFixed(2); editingIncome.value = true }
 async function saveIncome() {
+  if (busy.value) return
+  const targetMonth = store.month
   const cents = parseMoney(incomeDraft.value)
   if (cents === null) { store.notify('Enter a valid income amount.'); return }
   busy.value = true
-  try { await localRepository.saveIncome(store.month, cents); editingIncome.value = false; store.notify('Expected income saved.') }
+  try { await localRepository.saveIncome(targetMonth, cents); editingIncome.value = false; store.notify('Expected income saved.') }
   catch (e) { store.notify(e instanceof Error ? e.message : 'Unable to save income.') }
   finally { busy.value = false }
 }

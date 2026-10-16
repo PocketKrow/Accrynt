@@ -31,7 +31,7 @@ async function remove(record: Transaction) {
       <tr v-for="record in rows" :key="record.id"><td class="mono">{{ record.date }}</td><td><strong>{{ record.name }}</strong><small class="cell-sub">{{ record.category }}</small></td><td>{{ record.kind }}</td><td>{{ record.account || '—' }}</td><td class="number mono" :class="record.kind === 'income' ? 'good-text' : ''">{{ record.kind === 'income' ? '+' : '−' }}{{ formatMoney(record.amountCents) }}</td><td><div class="row-actions"><button class="text-link" @click="open(record)">Edit</button><button class="text-link danger-link" @click="remove(record)">Delete</button></div></td></tr>
       <tr v-if="!rows.length"><td colspan="6" class="empty-cell">No recorded activity this month. Start with a transaction when money actually moves.</td></tr>
     </tbody></table></div>
-    <p class="fine-print">No bank syncing, account reconciliation, or automatic balance calculation is claimed in v0.1.</p>
+    <p class="fine-print">No bank syncing, account reconciliation, or automatic balance calculation is claimed.</p>
   </section>
   <TransactionForm v-model="editor" :record="editing" />
 </template>

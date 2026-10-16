@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { debtProgress, monthlySummary, parseMoney, shiftMonth } from '../domain/finance'
+import { monthKeySchema, transactionSchema } from '../domain/models'
 import type { Obligation, Transaction, Debt } from '../domain/models'
 
 function obligation(input: Partial<Obligation> = {}): Obligation {
@@ -42,5 +43,27 @@ describe('dates and debt progress', () => {
     const debt: Debt = { id: crypto.randomUUID(), name: 'Loan', balanceCents: 50000, startingBalanceCents: null, minimumCents: 3000, aprBasisPoints: null, updatedAt: new Date().toISOString() }
     expect(debtProgress(debt)).toBeNull()
     expect(debtProgress({ ...debt, startingBalanceCents: 100000 })).toBe(50)
+  })
+})
+
+
+describe('input and calendar boundaries', () => {
+  it.each(['1,2', '12,34.56', ',100', '100,', '1,,000', '1000,000', 'NaN', 'Infinity', '9999999999', '0.001'])('rejects malformed money %s', value => {
+    expect(parseMoney(value)).toBeNull()
+  })
+  it('accepts well-formed grouping and the supported maximum', () => {
+    expect(parseMoney(' 999,999,999.99 ')).toBe(99999999999)
+    expect(parseMoney('0.00')).toBe(0)
+  })
+  it('validates leap years and low calendar years without the Date.UTC 1900 offset', () => {
+    expect(transactionSchema.safeParse(transaction({ date: '2024-02-29' })).success).toBe(true)
+    expect(transactionSchema.safeParse(transaction({ date: '2026-02-29' })).success).toBe(false)
+    expect(transactionSchema.safeParse(transaction({ date: '0001-01-01' })).success).toBe(true)
+    expect(transactionSchema.safeParse(transaction({ date: '0000-01-01' })).success).toBe(false)
+    expect(monthKeySchema.safeParse('0000-01').success).toBe(false)
+    expect(shiftMonth('0099-12', 1)).toBe('0100-01')
+    expect(shiftMonth('2027-01', -1)).toBe('2026-12')
+    expect(() => shiftMonth('0001-01', -1)).toThrow()
+    expect(() => shiftMonth('9999-12', 1)).toThrow()
   })
 })
