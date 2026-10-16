@@ -43,7 +43,7 @@ async function remove(record: Debt) {
     </article>
     <article v-if="!store.debts.length" class="panel empty-panel"><strong>No tracked debt accounts</strong><p>Add a credit card or loan balance when you're ready. Planned debt payments are tracked separately in the Monthly Plan.</p></article>
   </div>
-  <p class="fine-print">Forecasts update from your saved balance and payment plan. Record payment reduces principal using the split you confirm and adds one Ledger entry. Update balances from statements to reconcile charges and adjustments.</p>
+  <p class="fine-print">Forecasts update from your saved balance and payment plan. Record payment applies the balance reduction you confirm and adds one Ledger entry. Update balances from statements to reconcile charges and adjustments.</p>
   <DebtForm v-model="editor" :record="editing" />
   <PaymentForm v-model="paymentOpen" :debt="paying" />
 </template>

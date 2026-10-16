@@ -51,6 +51,7 @@ export const paymentReceiptSchema = z.object({
   recordedAt: z.string().datetime(),
   debtId: id.nullable(), debtName: z.string().max(100).nullable(),
   principalCents: money, interestCents: money,
+  interestIncludedInBalance: z.boolean().default(false),
   balanceBeforeCents: money.nullable(), balanceAfterCents: money.nullable()
 }).strict()
 export const transactionSchema = legacyTransactionSchema.extend({ payment: paymentReceiptSchema.nullable() })

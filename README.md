@@ -34,7 +34,7 @@ Playwright may need system libraries. Its `install --with-deps` option supports 
 
 ## What v0.4 adds
 
-- **Record payment once:** review the amount and interest/principal split, then confirm one Ledger entry, a principal reduction, and the linked bill's resulting payment status.
+- **Record payment once:** review the amount and interest/principal split, then confirm one Ledger entry, a debt balance update, and the linked bill's resulting payment status.
 - **Partial payments and undo:** bill status and remaining amounts derive from linked recorded outflow. Connected payments retain immutable split receipts and use a dedicated undo operation.
 - **Available-money Overview:** enter start-of-month opening cash, then see recorded available money and what remains after outstanding commitments. Expected income stays separate from received deposits.
 - **Monthly recurring bills and income:** define an amount, optional day, month range, and optional debt link. Each visited eligible month generates one entry per rule; income stays expected until recorded as received.
@@ -61,7 +61,7 @@ The manual paid checkbox remains for payments tracked elsewhere. It only records
 - **After outstanding bills** subtracts only unpaid bill remainders from tracked available. Linked payments can come from another month and reduce that obligation's remainder, while cash outflow belongs to the transaction's own month.
 - Future-dated Ledger entries are excluded from available money until their date. Confirmed payment actions reject future dates.
 - A manual paid confirmation stops reserving a bill but does not reduce tracked cash. Enter missing transactions to keep cash estimates accurate. No bank balance is verified by Accrynt.
-- Payment principal is the confirmed amount minus interest paid. Saved debt balance decreases only by principal. Enter 0 interest if the saved balance already includes the interest being paid; Accrynt does not automatically accrue unpaid interest or fees.
+- Payment principal is the confirmed amount minus interest paid. By default saved debt balance decreases by principal. If the saved statement balance already includes this interest, check that option: the full payment reduces the balance while the principal/interest split remains accurate. Accrynt does not automatically accrue unpaid interest or fees.
 - All payment effects commit together or roll back together. Repeated saves of the same request apply once. A changed debt or bill invalidates an open payment form.
 - Connected payments are corrected by undoing and recording again. Undo requires newer payments on that debt to be undone first and the debt balance to match the receipt's closing balance. Statement adjustments must be reconciled before undo. If the original debt was deleted, undo only removes the Ledger entry and refreshes any remaining bill link.
 - Ordinary Ledger transactions retain their editor. A generic debt-payment entry records outflow only; use Record payment to apply principal as well.

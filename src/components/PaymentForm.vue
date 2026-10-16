@@ -13,8 +13,10 @@ const store = useFinanceStore(), dialog = ref<HTMLDialogElement | null>(null)
 const busy = ref(false), error = ref(''), requestId = ref('')
 const debtSnapshot = ref<Debt | null>(null), billSnapshot = ref<Obligation | null>(null)
 const form = reactive({ debtId: '', obligationId: '', date: '', name: '', amount: '', interest: '', account: '' })
+const interestIncludedInBalance = ref(false)
 const choices = computed(() => store.obligations.filter(o => o.debtId === (form.debtId || null)))
 function capture() {
+  interestIncludedInBalance.value = false
   debtSnapshot.value = store.debts.find(d => d.id === form.debtId) ?? null
   billSnapshot.value = store.obligations.find(o => o.id === form.obligationId) ?? null
   const debt = debtSnapshot.value, bill = billSnapshot.value
@@ -45,7 +47,7 @@ watch(() => props.modelValue, async open => {
 const preview = computed(() => {
   const amount = parseMoney(form.amount), interest = debtSnapshot.value ? parseMoney(form.interest) : 0
   if (amount === null || amount <= 0 || interest === null) return { error: 'Enter a payment and the interest paid (0 when appropriate).', split: null }
-  try { return { error: '', split: debtSnapshot.value ? paymentSplit(debtSnapshot.value.balanceCents, amount, interest) : null } }
+  try { return { error: '', split: debtSnapshot.value ? paymentSplit(debtSnapshot.value.balanceCents, amount, interest, interestIncludedInBalance.value) : null } }
   catch (reason) { return { error: reason instanceof Error ? reason.message : 'Check the split.', split: null } }
 })
 async function submit() {
@@ -57,8 +59,9 @@ async function submit() {
     await localRepository.recordPayment({ id: requestId.value, date: form.date, name: form.name.trim(),
       amountCents: parseMoney(form.amount)!, interestCents: debtSnapshot.value ? parseMoney(form.interest)! : 0,
       account: form.account.trim(), debtId: form.debtId || null, obligationId: form.obligationId || null,
-      expectedDebtUpdatedAt: debtSnapshot.value?.updatedAt, expectedObligationUpdatedAt: billSnapshot.value?.updatedAt })
-    emit('update:modelValue', false); store.notify('Payment recorded. Ledger, debt principal, and linked bill status updated.')
+      expectedDebtUpdatedAt: debtSnapshot.value?.updatedAt, expectedObligationUpdatedAt: billSnapshot.value?.updatedAt,
+      interestIncludedInBalance: interestIncludedInBalance.value })
+    emit('update:modelValue', false); store.notify('Payment recorded. Ledger, debt balance, and linked bill status updated.')
   } catch (reason) { error.value = reason instanceof Error ? reason.message : 'Unable to record payment.' }
   finally { busy.value = false }
 }
@@ -74,12 +77,14 @@ async function submit() {
       <label>Payment amount (USD)<input v-model="form.amount" inputmode="decimal" required /></label>
       <template v-if="debtSnapshot">
         <label>Interest included in payment (USD)<input v-model="form.interest" inputmode="decimal" required aria-describedby="payment-interest-hint" /></label>
-        <p id="payment-interest-hint" class="form-hint">Prefilled from the monthly estimate when a rate is available. Check your statement and adjust. Enter 0 if your saved balance already includes the interest being paid; unpaid interest and fees are not added automatically.</p>
+        <p id="payment-interest-hint" class="form-hint">Prefilled from the monthly estimate when a rate is available. Check your statement and adjust the actual interest paid. Unpaid interest and fees are not added automatically.</p>
+        <label class="checkbox-inline"><input v-model="interestIncludedInBalance" type="checkbox" /> Interest is already included in saved balance</label>
+        <p class="form-hint">Check for a statement balance that includes this interest: the full payment reduces that balance. Otherwise, only principal reduces the saved balance. Review the result below.</p>
       </template>
       <label>Account label (optional)<input v-model="form.account" maxlength="80" placeholder="Checking, cash…" /></label>
       <section v-if="preview.split && debtSnapshot" class="payment-review" aria-label="Payment review">
         <span class="eyebrow">REVIEW BEFORE RECORDING</span>
-        <dl class="debt-facts"><div><dt>Interest paid</dt><dd>{{ formatMoney(preview.split.interestCents) }}</dd></div><div><dt>Principal reduction</dt><dd>{{ formatMoney(preview.split.principalCents) }}</dd></div><div><dt>Saved balance</dt><dd>{{ formatMoney(debtSnapshot.balanceCents) }} → {{ formatMoney(preview.split.balanceAfterCents) }}</dd></div></dl>
+        <dl class="debt-facts"><div><dt>Interest paid</dt><dd>{{ formatMoney(preview.split.interestCents) }}</dd></div><div><dt>Principal paid</dt><dd>{{ formatMoney(preview.split.principalCents) }}</dd></div><div><dt>Balance reduction</dt><dd>{{ formatMoney(preview.split.balanceReductionCents) }}</dd></div><div><dt>Saved balance</dt><dd>{{ formatMoney(debtSnapshot.balanceCents) }} → {{ formatMoney(preview.split.balanceAfterCents) }}</dd></div></dl>
       </section>
       <p v-if="preview.error" class="form-hint">{{ preview.error }}</p>
       <p class="form-hint">Records one Ledger entry. Linked bill status uses all recorded payments, including partial payments. Expected income and future bills do not move money.</p>

@@ -26,6 +26,15 @@ beforeEach(async () => { await db.open(); await clearWorkspace() })
 afterEach(async () => { vi.restoreAllMocks(); await clearWorkspace(); db.close() })
 
 describe('connected payments', () => {
+  it('keeps the split accurate when interest is already included in the saved statement balance', async () => {
+    const { d, o } = await seed()
+    const row = await repo.recordPayment({ ...payment(d, o), interestIncludedInBalance: true })
+    expect(row.payment).toMatchObject({ principalCents: 9000, interestCents: 1000, interestIncludedInBalance: true, balanceAfterCents: 90000 })
+    expect((await db.debts.get(d.id))?.balanceCents).toBe(90000)
+    expect(validateBackup(await exportBackup()).transactions[0].payment?.interestIncludedInBalance).toBe(true)
+    await repo.undoPayment(row.id, row.updatedAt)
+    expect((await db.debts.get(d.id))?.balanceCents).toBe(100000)
+  })
   it('applies concurrent retries exactly once and leaves a partially paid bill', async () => {
     const { d, o } = await seed(), input = payment(d, o)
     const results = await Promise.all([repo.recordPayment(input), repo.recordPayment(input)])
@@ -211,7 +220,8 @@ describe('cashflow and comparisons', () => {
     expect(input.monthlyPaymentCents).toBeNull()
   })
   it('validates actual splits without adding estimated charges to saved balances', () => {
-    expect(paymentSplit(100000, 10000, 1000)).toEqual({ principalCents: 9000, interestCents: 1000, balanceAfterCents: 91000 })
+    expect(paymentSplit(100000, 10000, 1000)).toEqual({ principalCents: 9000, interestCents: 1000, balanceReductionCents: 9000, balanceAfterCents: 91000 })
+    expect(paymentSplit(100000, 10000, 1000, true)).toEqual({ principalCents: 9000, interestCents: 1000, balanceReductionCents: 10000, balanceAfterCents: 90000 })
     expect(paymentSplit(100000, 10000, 0).balanceAfterCents).toBe(90000)
     expect(paymentSplit(100000, 1000, 1000).principalCents).toBe(0)
     expect(() => paymentSplit(100000, 1000, 1001)).toThrow()
@@ -237,6 +247,8 @@ describe('v3 data recovery', () => {
     await repo.saveOpeningBalance('2026-01', 123456); await db.recurringRules.add(rule('income')); await repo.ensureRecurringMonth('2026-01')
     const backup = await exportBackup(); await clearWorkspace(); await restoreBackup(JSON.parse(JSON.stringify(backup)))
     expect(await exportBackup()).toMatchObject({ ...backup, exportedAt: expect.any(String) })
+    const { interestIncludedInBalance: _flag, ...olderDraftReceipt } = backup.transactions[0].payment!
+    expect(validateBackup({ ...backup, transactions: [{ ...backup.transactions[0], payment: olderDraftReceipt }] }).transactions[0].payment?.interestIncludedInBalance).toBe(false)
     const before = await readWorkspace()
     vi.spyOn(db.recurringOccurrences, 'bulkAdd').mockRejectedValueOnce(new Error('Simulated recurring write failure'))
     await expect(restoreBackup(backup)).rejects.toThrow('recurring write failure')

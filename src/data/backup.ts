@@ -29,10 +29,10 @@ export function validateBackup(content: unknown): Backup {
     if (row.obligationId !== null && !obligationIds.has(row.obligationId)) throw new Error('Backup has a transaction linked to a missing obligation.')
     const p = row.payment
     if (p) {
-      if (row.amountCents <= 0 || row.kind === 'income' || (p.debtId === null && (row.kind !== 'expense' || p.debtName !== null || p.principalCents !== 0 || p.interestCents !== 0 || p.balanceBeforeCents !== null || p.balanceAfterCents !== null)) ||
+      if (row.amountCents <= 0 || row.kind === 'income' || (p.debtId === null && (row.kind !== 'expense' || p.debtName !== null || p.principalCents !== 0 || p.interestCents !== 0 || p.interestIncludedInBalance || p.balanceBeforeCents !== null || p.balanceAfterCents !== null)) ||
         (p.debtId !== null && (row.kind !== 'debt-payment' || row.category !== 'Debt payments' || p.debtName === null ||
           p.balanceBeforeCents === null || p.balanceAfterCents === null || p.principalCents + p.interestCents !== row.amountCents ||
-          p.balanceBeforeCents - p.principalCents !== p.balanceAfterCents))) throw new Error('Backup has an invalid payment receipt.')
+          p.balanceBeforeCents - p.principalCents - (p.interestIncludedInBalance ? p.interestCents : 0) !== p.balanceAfterCents))) throw new Error('Backup has an invalid payment receipt.')
     }
   }
   const rulesById = new Map(data.recurringRules.map(row => [row.id, row])), generatedBills = new Set<string>()

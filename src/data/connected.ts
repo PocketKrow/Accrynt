@@ -8,6 +8,7 @@ export interface RecordPaymentInput {
   id: string; date: string; name: string; amountCents: number; interestCents: number; account: string
   debtId: string | null; obligationId: string | null
   expectedDebtUpdatedAt?: string; expectedObligationUpdatedAt?: string
+  interestIncludedInBalance?: boolean
 }
 
 export const connectedRepository = {
@@ -27,7 +28,8 @@ export const connectedRepository = {
       if (previous) {
         if (previous.payment && previous.date === input.date && previous.name === input.name && previous.amountCents === input.amountCents &&
           previous.account === input.account && previous.obligationId === input.obligationId && previous.payment.debtId === input.debtId &&
-          previous.payment.interestCents === input.interestCents) return previous
+          previous.payment.interestCents === input.interestCents &&
+          (previous.payment.interestIncludedInBalance ?? false) === (input.interestIncludedInBalance ?? false)) return previous
         throw new Error('This payment request was already used. Close and reopen the payment form.')
       }
       const debt = input.debtId ? await db.debts.get(input.debtId) : undefined
@@ -42,13 +44,15 @@ export const connectedRepository = {
         if (obligation!.debtId !== input.debtId) throw new Error('The obligation and selected debt do not match.')
       }
       if (!debt && input.interestCents !== 0) throw new Error('Only debt payments can include an interest split.')
-      const split = debt ? paymentSplit(debt.balanceCents, input.amountCents, input.interestCents) : null
+      if (!debt && input.interestIncludedInBalance) throw new Error('Only debt payments can specify interest in the saved balance.')
+      const split = debt ? paymentSplit(debt.balanceCents, input.amountCents, input.interestCents, input.interestIncludedInBalance ?? false) : null
       const stamp = nextTimestamp(debt?.updatedAt ?? obligation!.updatedAt)
       const row = transactionSchema.parse({ id: input.id, date: input.date, name: input.name,
         kind: debt ? 'debt-payment' : 'expense', category: debt ? 'Debt payments' : obligation!.category,
         amountCents: input.amountCents, account: input.account, obligationId: input.obligationId, updatedAt: stamp,
         payment: { recordedAt: stamp, debtId: debt?.id ?? null, debtName: debt?.name ?? null, principalCents: split?.principalCents ?? 0,
-          interestCents: split?.interestCents ?? 0, balanceBeforeCents: debt?.balanceCents ?? null, balanceAfterCents: split?.balanceAfterCents ?? null } })
+          interestCents: split?.interestCents ?? 0, interestIncludedInBalance: debt ? input.interestIncludedInBalance ?? false : false,
+          balanceBeforeCents: debt?.balanceCents ?? null, balanceAfterCents: split?.balanceAfterCents ?? null } })
       if (row.amountCents <= 0) throw new Error('Payment must be greater than zero.')
       if (debt && split) await db.debts.update(debt.id, { balanceCents: split.balanceAfterCents, updatedAt: stamp })
       if (obligation) await db.obligations.update(obligation.id, { updatedAt: nextTimestamp(obligation.updatedAt) })
