@@ -114,7 +114,9 @@ test('backup restore roundtrips records; invalid input and cancelled deletion pr
   expect((await exportData(page)).obligations).toEqual(backup.obligations)
 })
 
-test('storage controls handle browser decisions and theme survives a reload', async ({ page }) => {
+test('storage controls handle browser decisions and theme survives a reload', async ({ page, context, browserName }) => {
+  // Firefox shows a native permission prompt; grant it explicitly in this isolated test profile.
+  if (browserName === 'firefox') await context.grantPermissions(['persistent-storage'], { origin: 'http://127.0.0.1:4173' })
   await goSettings(page)
   await page.getByRole('button', { name: 'Check', exact: true }).click()
   await expect(page.getByText(/MB used|Storage estimate unavailable/)).toBeVisible()
@@ -205,4 +207,22 @@ test('temporary IndexedDB open failure offers a working Retry without clearing r
   await expect(page.getByRole('heading', { name: 'Monthly plan', exact: true })).toBeVisible()
   await expect(page.getByRole('row').filter({ hasText: 'Test electricity' })).toBeVisible()
   await expect(page.getByRole('alert')).not.toBeVisible()
+})
+
+
+test('persistent storage shows its pending decision and handles a refusal without losing records', async ({ page }) => {
+  await openPlan(page); await addBill(page)
+  await page.evaluate(() => {
+    Object.defineProperty(navigator.storage, 'persist', { configurable: true, value: () => new Promise<boolean>(resolve => {
+      (window as typeof window & { accryntTestResolvePersistence: (value: boolean) => void }).accryntTestResolvePersistence = resolve
+    }) })
+  })
+  await goSettings(page)
+  await page.getByRole('button', { name: 'Request', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Waiting…', exact: true })).toBeDisabled()
+  await expect(page.getByText(/Waiting for your browser’s permission decision/)).toBeVisible()
+  await page.evaluate(() => { (window as typeof window & { accryntTestResolvePersistence: (value: boolean) => void }).accryntTestResolvePersistence(false) })
+  await expect(page.getByRole('button', { name: 'Request', exact: true })).toBeEnabled()
+  await expect(page.getByText('The browser did not grant persistent storage.', { exact: false })).toBeVisible()
+  expect((await exportData(page)).obligations).toHaveLength(1)
 })

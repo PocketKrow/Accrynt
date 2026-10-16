@@ -10,6 +10,7 @@ const store = useFinanceStore()
 const busy = ref(false)
 const error = ref('')
 const persisted = ref<boolean | null>(null)
+const requestingPersistence = ref(false)
 const storageEstimate = ref('Not checked')
 const selectedFile = ref<File | null>(null)
 const backupInput = ref<HTMLInputElement | null>(null)
@@ -70,12 +71,14 @@ async function storageInfo() {
   } catch (e) { handleError(e) }
 }
 async function requestPersistence() {
+  if (requestingPersistence.value) return
   error.value = ''
   if (!navigator.storage?.persist) { error.value = 'Persistent storage requests are not supported by this browser.'; return }
+  requestingPersistence.value = true
   try {
     persisted.value = await navigator.storage.persist()
     store.notify(persisted.value ? 'The browser granted persistent storage.' : 'The browser did not grant persistent storage. Back up your data regularly.')
-  } catch (e) { handleError(e) }
+  } catch (e) { handleError(e) } finally { requestingPersistence.value = false }
 }
 async function loadSample() {
   if (busy.value) return
@@ -115,7 +118,7 @@ async function clearAll() {
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">BROWSER STORAGE</span><h2>Data location</h2></div></div>
       <p class="body-copy">Records are stored in your browser's IndexedDB database <code>accrynt-local-v1</code>, tied to this website's origin and browser profile. Clearing site data or changing devices will not preserve them automatically.</p>
       <div class="setting-row"><div><strong>Storage estimate</strong><p>{{ storageEstimate }}</p></div><button class="button small" @click="storageInfo">Check</button></div>
-      <div class="setting-row"><div><strong>Persistent storage</strong><p>{{ persisted === true ? 'Granted' : persisted === false ? 'Not granted' : 'Not checked' }}. A request may be declined by the browser.</p></div><button class="button small" @click="requestPersistence">Request</button></div>
+      <div class="setting-row"><div><strong>Persistent storage</strong><p>{{ requestingPersistence ? 'Waiting for your browser’s permission decision' : persisted === true ? 'Granted' : persisted === false ? 'Not granted' : 'Not checked' }}. A request may be declined by the browser.</p></div><button class="button small" :disabled="requestingPersistence" @click="requestPersistence">{{ requestingPersistence ? 'Waiting…' : 'Request' }}</button></div>
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">WORKSPACE TOOLS</span><h2>Local controls</h2></div></div>
       <p class="body-copy">Start with the approved October design data if you want a populated sandbox. It can only be added to an entirely empty workspace and never loads automatically.</p>

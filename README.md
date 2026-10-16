@@ -41,7 +41,7 @@ On Linux, Playwright may require system libraries; its `npx playwright install -
 - Transaction obligation choices follow the transaction date. An existing cross-month link remains visible with its month; income saves clear the payment link.
 - Debt balances may legitimately exceed their starting balance, with an explicit amount-above-baseline label.
 - Strict monetary grouping and calendar boundaries, storage retry, and guarded backup-file selection.
-- A committed npm lockfile, finance/storage regression tests, production browser smoke tests, and GitHub Actions validation.
+- A committed npm lockfile, a patched Vitest test runner, finance/storage regression tests, production browser smoke tests, and GitHub Actions validation.
 - Small contrast corrections within the existing palette; the visual structure is unchanged.
 
 ## Daily workflow
@@ -68,7 +68,7 @@ Records live in the browser's IndexedDB database **`accrynt-local-v1`**, schema 
 
 Use **Settings → Download JSON backup** to move records or keep an external copy. Restore validates the archive, shows its record counts, and requires confirmation before replacing all local records atomically. The portable format remains `accrynt-portable`, schema version 1; v0.1 backups remain supported. The file picker has a 15 MB import limit. Backup files are **unencrypted**.
 
-Browser site-data clearing, profile removal, or storage eviction can remove records. The explicit persistent-storage request can be declined or unavailable, and does not replace external backups. Deletion affects the current browser's database; it does not remove previously downloaded backups. A temporary database error offers Retry without clearing stored records.
+Browser site-data clearing, profile removal, or storage eviction can remove records. The explicit persistent-storage request shows when a browser decision is pending and can be declined or unavailable, and does not replace external backups. Deletion affects the current browser's database; it does not remove previously downloaded backups. A temporary database error offers Retry without clearing stored records.
 
 ## Offline operation and validation
 
