@@ -27,12 +27,12 @@ const example: Array<[string, number, Category]> = [
 ]
 
 export async function loadOctoberExample(month: string) {
-  await db.transaction('rw', db.months, db.obligations, db.transactions, db.debts, async () => {
+  await db.transaction('rw', db.tables, async () => {
     if (await db.months.count() || await db.obligations.count() ||
-        await db.transactions.count() || await db.debts.count()) {
+        await db.transactions.count() || await db.debts.count() || await db.recurringRules.count() || await db.recurringOccurrences.count()) {
       throw new Error('Example data can only be loaded into a completely empty workspace.')
     }
-    await db.months.put({ key: month, incomeCents: 182200, updatedAt: now() })
+    await db.months.put({ key: month, incomeCents: 182200, openingCents: null, updatedAt: now() })
     const rows: Obligation[] = example.map(([name, plannedCents, category]) => ({
       id: newId(), month, name, plannedCents, category,
       paidAt: null, dueDay: null, debtId: null, updatedAt: now()

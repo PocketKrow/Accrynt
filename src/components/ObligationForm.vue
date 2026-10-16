@@ -58,7 +58,7 @@ async function submit() {
         <label v-if="store.debts.length">Linked debt (optional)
           <select v-model="form.debtId"><option value="">None</option><option v-for="debt in store.debts" :key="debt.id" :value="debt.id">{{ debt.name }}</option></select>
         </label>
-        <p class="form-hint">Checking this obligation as paid does not create a ledger transaction. Record actual money movement separately.</p>
+        <p class="form-hint">This edits only this month’s bill. Use Record payment when money moves; the manual paid checkbox remains available for payments tracked elsewhere.</p>
         <p v-if="error" class="error-message" role="alert">{{ error }}</p>
         <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="emit('update:modelValue', false)">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save obligation' }}</button></div>
       </form>

@@ -170,6 +170,31 @@ input,select{min-width:0}
 .forecast-pagination{display:flex;align-items:center;justify-content:space-between;gap:7px;flex-wrap:wrap;margin-top:12px}
 .forecast-pagination .button{font-size:10px;padding:7px 8px}
 .modal-panel .debt-forecast{margin:0}
+.payment-review{padding:14px;border:1px solid var(--line);background:var(--surface2)}
+.payment-review .debt-facts{margin:12px 0 0}
+.payment-review dd{margin:0;font-size:11px;font-weight:700;text-align:right;overflow-wrap:anywhere}
+.cashflow-context{display:flex;justify-content:space-between;align-items:baseline;gap:15px;margin:0 0 17px;flex-wrap:wrap}
+.cashflow-context p{margin:0;max-width:780px}
+.focus-dashboard{align-items:start;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+.focus-dashboard .bill-row{flex-wrap:wrap;gap:10px}
+.focus-dashboard .bill-name{min-width:100px;flex:1}
+.budget-details,.recurring-panel,.expected-income-panel{margin-top:12px;min-width:0}
+.budget-details>summary,.recurring-panel>summary{cursor:pointer;font-size:12px;font-weight:750;line-height:1.6}
+.recurring-content{padding-top:15px;min-width:0}
+.scheduled-row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:17px 0;border-bottom:1px solid var(--line);font-size:11px}
+.scheduled-row>div:first-child{flex:1;min-width:140px}
+.scheduled-row strong{overflow-wrap:anywhere}
+.scheduled-row small{display:block;font-size:10px;color:var(--muted);margin-top:5px}
+.modal-panel form>label.checkbox-inline{display:flex;align-items:center;text-transform:none;letter-spacing:normal}
+.modal-panel .checkbox-inline input{min-height:auto}
+.comparison-label{display:grid;gap:6px;font-size:11px;color:var(--muted)}
+.comparison-label input{width:100%;border:1px solid var(--line);background:var(--surface2);color:var(--ink);padding:10px;font-size:12px}
+.comparison-presets{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.extra-payment-details .debt-facts dt{font-size:10px;color:var(--muted)}
+.extra-payment-details .debt-facts dd{margin:0;font-size:11px;text-align:right}
+.receipt-details{margin-top:7px;white-space:normal;font-size:10px;line-height:1.6;max-width:340px}
+.receipt-details summary{color:var(--accent);cursor:pointer}
+@media(max-width:900px){.focus-dashboard{grid-template-columns:1fr}}
 .meter-block{margin-top:22px}.meter-annotation{display:flex;justify-content:space-between;gap:12px;font-size:10px;margin-bottom:8px}
 .empty-panel p{font-size:11px;color:var(--muted);line-height:1.6}
 .reports-grid{grid-template-columns:minmax(0,1.2fr) minmax(260px,.9fr)}

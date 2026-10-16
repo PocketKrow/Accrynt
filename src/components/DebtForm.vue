@@ -64,7 +64,7 @@ async function submit() {
         <p class="form-hint">Blank uses the saved minimum, held constant for this estimate. A saved 0 means no payment.</p>
         <DebtForecast v-if="calculation" :debt="calculation" compact />
         <p v-else class="form-hint">Enter a valid balance, minimum, and optional payment/rate to preview calculations.</p>
-        <p class="form-hint">Forecasts update automatically. Update your saved balance from your statement; estimates do not post payments or interest charges.</p>
+        <p class="form-hint">Forecasts update automatically. Use Record payment to apply a confirmed principal reduction. Edit this balance to reconcile statement charges and adjustments.</p>
         <p v-if="error" class="error-message" role="alert">{{ error }}</p>
         <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="emit('update:modelValue', false)">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save debt' }}</button></div>
       </form>

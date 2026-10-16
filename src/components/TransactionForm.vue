@@ -2,10 +2,10 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { localRepository } from '../data/repository'
 import { parseMoney } from '../domain/finance'
-import { categorySchema, type Transaction, type TransactionKind, type Category, transactionMonth } from '../domain/models'
+import { categorySchema, type Transaction, type TransactionKind, type Category, transactionMonth, localDate } from '../domain/models'
 import { useFinanceStore } from '../stores/finance'
 const dialogElement = ref<HTMLDialogElement | null>(null)
-const props = defineProps<{ modelValue: boolean; record?: Transaction | null }>()
+const props = defineProps<{ modelValue: boolean; record?: Transaction | null; seed?: { name: string; amountCents: number; kind: TransactionKind } | null }>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 const store = useFinanceStore()
 const busy = ref(false), error = ref('')
@@ -15,11 +15,11 @@ const relatedObligations = computed(() => store.obligations.filter(item =>
 watch(() => form.kind, kind => { if (kind === 'income') form.obligationId = '' })
 watch(() => [props.modelValue, props.record] as const, () => {
   if (!props.modelValue) return
-  form.date = props.record?.date ?? (() => { const local = new Date(); const today = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`; return today.startsWith(store.month) ? today : `${store.month}-01` })()
-  form.name = props.record?.name ?? ''
-  form.kind = props.record?.kind ?? 'expense'
+  form.date = props.record?.date ?? (props.seed ? localDate() : (() => { const today = localDate(); return today.startsWith(store.month) ? today : `${store.month}-01` })())
+  form.name = props.record?.name ?? props.seed?.name ?? ''
+  form.kind = props.record?.kind ?? props.seed?.kind ?? 'expense'
   form.category = props.record?.category ?? 'Other'
-  form.amount = props.record ? (props.record.amountCents / 100).toFixed(2) : ''
+  form.amount = props.record || props.seed ? ((props.record?.amountCents ?? props.seed!.amountCents) / 100).toFixed(2) : ''
   form.account = props.record?.account ?? ''
   form.obligationId = props.record?.obligationId ?? ''
   error.value = ''
@@ -59,7 +59,7 @@ async function submit() {
         <label v-if="form.kind !== 'income' && relatedObligations.length">Related obligation (optional)
           <select v-model="form.obligationId"><option value="">Not linked</option><option v-for="obligation in relatedObligations" :key="obligation.id" :value="obligation.id">{{ obligation.name }} · {{ obligation.month }}</option></select>
         </label>
-        <p class="form-hint">Obligation choices follow the transaction date; an existing link may refer to a different month. A debt payment is recorded as actual outflow once. Debt balances are edited separately until reconciliation is implemented.</p>
+        <p class="form-hint">Linked outflow reduces the obligation’s remaining amount. To update debt principal too, use Record payment from Debts or Monthly Plan. This form records Ledger activity only.</p>
         <p v-if="error" class="error-message" role="alert">{{ error }}</p>
         <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="emit('update:modelValue', false)">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save transaction' }}</button></div>
       </form>
