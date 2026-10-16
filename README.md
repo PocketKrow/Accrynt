@@ -94,3 +94,11 @@ A production app visited online can reload offline after its service worker acti
 GitHub Actions checks types, unit/storage tests, the production build, and Chromium/Firefox browser workflows. Detailed contracts and verification are in [docs/QA-connected-workflow.md](docs/QA-connected-workflow.md). Earlier [v0.2 evidence](docs/QA-v0.2.md) and [v0.3 debt evidence](docs/QA-debt-interest.md) document those releases.
 
 There is no bank syncing, server, cloud account, analytics, structured account-transfer system, encrypted backup, or Tauri/Rust build. Domain rules remain separate from storage for a future Tauri 2/SQLite adapter.
+
+## Interactive synthetic demo
+
+Run `npm ci`, `npm run build`, then `npm run preview`. Open `http://localhost:4173/?demo=1#/` (or choose **Try demo** in the app). The ordinary workspace remains at `/#/`.
+
+The demo runs the same forms, calculations, repository and IndexedDB writes as the app. Its separate `accrynt-demo-v1` database seeds six months of fictional history once, persists edits across reloads, and supports a confirmed **Reset demo** with negative-cash, near-payoff and February scenarios. **Return to my workspace** performs full navigation back to `accrynt-local-v1`; it does not copy or clear personal records. Demo backups carry a `DEMO-SYNTHETIC` filename. Theme preferences are separate.
+
+Offline use requires one successful online load and an installed service worker. Browser storage is profile/origin specific; backups are still necessary. No backend or telemetry is involved. See `docs/IMPLEMENTATION-REVIEW.md` for audit decisions, date semantics and staged migration notes.

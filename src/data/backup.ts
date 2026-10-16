@@ -1,3 +1,4 @@
+import { isDemo } from './workspace'
 import { db, readWorkspace } from './database'
 import { portableBackupSchema, now, type Backup } from '../domain/models'
 
@@ -27,6 +28,8 @@ export function validateBackup(content: unknown): Backup {
   }
   for (const row of data.transactions) {
     if (row.obligationId !== null && !obligationIds.has(row.obligationId)) throw new Error('Backup has a transaction linked to a missing obligation.')
+    if (row.kind === 'income' && row.obligationId !== null) throw new Error('Income cannot link to a payment obligation.')
+    // Historical receipts retain their debt identity after obligation relinking/debt deletion.
     const p = row.payment
     if (p) {
       if (row.amountCents <= 0 || row.kind === 'income' || (p.debtId === null && (row.kind !== 'expense' || p.debtName !== null || p.principalCents !== 0 || p.interestCents !== 0 || p.interestIncludedInBalance || p.balanceBeforeCents !== null || p.balanceAfterCents !== null)) ||
@@ -68,7 +71,7 @@ export function downloadFile(filename: string, content: string, mime = 'applicat
   const url = URL.createObjectURL(new Blob([content], { type: mime }))
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = filename
+  anchor.download = isDemo ? `DEMO-SYNTHETIC-${filename}` : filename
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()

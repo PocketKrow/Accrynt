@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorMessage } from '../domain/errors'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import DebtForecast from './DebtForecast.vue'
 import { parseAnnualRate } from '../domain/debt'
@@ -46,7 +47,7 @@ async function submit() {
     await localRepository.saveDebt({ name: form.name.trim(), startingBalanceCents, ...calculation.value }, props.record?.id, props.record?.updatedAt)
     emit('update:modelValue', false)
     store.notify(props.record ? 'Debt updated.' : 'Debt added.')
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Unable to save debt.' }
+  } catch (e) { error.value = errorMessage(e, 'Unable to save debt.') }
   finally { busy.value = false }
 }
 </script>

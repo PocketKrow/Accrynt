@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorMessage } from '../domain/errors'
 import { computed, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import MetricCard from '../components/MetricCard.vue'
@@ -15,12 +16,12 @@ function open(record: Transaction | null = null) { editing.value = record; edito
 async function remove(record: Transaction) {
   if (!confirm(`Delete transaction "${record.name}"? This cannot be undone except by restoring a backup.`)) return
   try { await localRepository.deleteTransaction(record.id); store.notify('Transaction deleted.') }
-  catch (e) { store.notify(e instanceof Error ? e.message : 'Unable to delete transaction.') }
+  catch (e) { store.notify(errorMessage(e, 'Unable to delete transaction.')) }
 }
 async function undo(record: Transaction) {
   if (!confirm(`Undo payment "${record.name}"? This removes the Ledger entry, recalculates the linked bill status, and restores the prior debt balance if the original debt still exists. Newer debt payments must be undone first.`)) return
   try { await localRepository.undoPayment(record.id, record.updatedAt); store.notify('Payment undone. Linked totals refreshed.') }
-  catch (reason) { store.notify(reason instanceof Error ? reason.message : 'Unable to undo payment.') }
+  catch (reason) { store.notify(errorMessage(reason, 'Unable to undo payment.')) }
 }
 </script>
 <template>

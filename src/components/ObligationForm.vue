@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorMessage } from '../domain/errors'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useFinanceStore } from '../stores/finance'
 import { localRepository } from '../data/repository'
@@ -43,7 +44,7 @@ async function submit() {
     }, props.record?.id, props.record?.updatedAt)
     emit('update:modelValue', false)
     store.notify(props.record ? 'Obligation updated.' : 'Obligation added.')
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Unable to save obligation.' }
+  } catch (e) { error.value = errorMessage(e, 'Unable to save obligation.') }
   finally { busy.value = false }
 }
 </script>

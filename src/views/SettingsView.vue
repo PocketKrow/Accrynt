@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { errorMessage } from '../domain/errors'
 import { computed, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import { useFinanceStore } from '../stores/finance'
 import { exportBackup, restoreBackup, validateBackup, downloadFile } from '../data/backup'
 import { loadOctoberExample } from '../data/example'
 import type { Backup } from '../domain/models'
+import { isDemo, databaseName, workspaceUrl } from '../data/workspace'
 import { clearWorkspace } from '../data/database'
 const store = useFinanceStore()
 const busy = ref(false)
@@ -23,7 +25,7 @@ const rowCounts = computed(() => ({
   transactions: store.transactions.length,
   debts: store.debts.length, recurringRules: store.recurringRules.length, recurringOccurrences: store.recurringOccurrences.length
 }))
-function handleError(e: unknown) { error.value = e instanceof Error ? e.message : 'An unexpected storage error occurred.' }
+function handleError(e: unknown) { error.value = errorMessage(e, 'An unexpected storage error occurred.') }
 async function exportData() {
   if (busy.value) return
   busy.value = true; error.value = ''
@@ -46,7 +48,7 @@ async function chooseBackup(event: Event) {
     const content: unknown = JSON.parse(await file.text())
     if (version !== selectionVersion) return
     readyBackup.value = validateBackup(content)
-  } catch (e) { if (version !== selectionVersion) return; importError.value = e instanceof Error ? e.message : 'The selected file is not a valid Accrynt backup.' }
+  } catch (e) { if (version !== selectionVersion) return; importError.value = errorMessage(e, 'The selected file is not a valid Accrynt backup.') }
 }
 async function restore() {
   if (busy.value || !readyBackup.value) return
@@ -82,9 +84,9 @@ async function requestPersistence() {
 }
 async function loadSample() {
   if (busy.value) return
-  if (!confirm('Load the October example from the approved design concept? The example is only allowed in an empty database.')) return
+  if (!confirm('Load fictional example bills into the selected month? The example is only allowed in an empty database.')) return
   busy.value = true; error.value = ''
-  try { await loadOctoberExample(store.month); store.notify('October example loaded. No transactions or debt balances were invented.') }
+  try { await loadOctoberExample(store.month); store.notify('Fictional example bills loaded in the selected month.') }
   catch (e) { handleError(e) } finally { busy.value = false }
 }
 async function clearAll() {
@@ -116,13 +118,14 @@ async function clearAll() {
       <button v-if="readyBackup" class="button danger-button" :disabled="busy" @click="restore">Replace local records with backup</button>
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">BROWSER STORAGE</span><h2>Data location</h2></div></div>
-      <p class="body-copy">Records are stored in your browser's IndexedDB database <code>accrynt-local-v1</code>, tied to this website's origin and browser profile. Clearing site data or changing devices will not preserve them automatically.</p>
+      <p class="body-copy">Records are stored in your browser's IndexedDB database <code>{{ databaseName }}</code>, tied to this website's origin and browser profile. Clearing site data or changing devices will not preserve them automatically.</p>
       <div class="setting-row"><div><strong>Storage estimate</strong><p>{{ storageEstimate }}</p></div><button class="button small" @click="storageInfo">Check</button></div>
       <div class="setting-row"><div><strong>Persistent storage</strong><p>{{ requestingPersistence ? 'Waiting for your browser’s permission decision' : persisted === true ? 'Granted' : persisted === false ? 'Not granted' : 'Not checked' }}. A request may be declined by the browser.</p></div><button class="button small" :disabled="requestingPersistence" @click="requestPersistence">{{ requestingPersistence ? 'Waiting…' : 'Request' }}</button></div>
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">WORKSPACE TOOLS</span><h2>Local controls</h2></div></div>
-      <p class="body-copy">Start with the approved October design data if you want a populated sandbox. It can only be added to an entirely empty workspace and never loads automatically.</p>
-      <button v-if="!store.hasAnyData" class="button" :disabled="busy" @click="loadSample">Load optional October example</button>
+      <p class="body-copy">Use Try demo for a fully interactive synthetic workspace. The small selected-month example adds fictional bills. It can only be added to an entirely empty workspace and never loads automatically.</p>
+      <a v-if="!isDemo" class="button" :href="workspaceUrl(true)">Try demo</a>
+      <button v-if="!store.hasAnyData" class="button" :disabled="busy" @click="loadSample">Load selected-month example</button>
       <p v-else class="muted small-text">Example import is disabled because this workspace already has data.</p>
       <hr class="section-divider"/>
       <p class="body-copy">Permanent deletion affects only the current browser's Accrynt database; existing downloaded backups are unaffected.</p>

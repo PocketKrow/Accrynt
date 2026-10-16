@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorMessage } from '../domain/errors'
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useFinanceStore } from '../stores/finance'
@@ -28,7 +29,7 @@ async function saveOpening(clear = false) {
   if (!clear && cents === null) { store.notify('Enter a valid opening balance; negative balances are supported.'); return }
   busy.value = true
   try { await localRepository.saveOpeningBalance(target, cents); openingEditor.value = false; store.notify(clear ? 'Opening balance cleared.' : 'Opening balance saved.') }
-  catch (reason) { store.notify(reason instanceof Error ? reason.message : 'Unable to save opening balance.') }
+  catch (reason) { store.notify(errorMessage(reason, 'Unable to save opening balance.')) }
   finally { busy.value = false }
 }
 function pay(item: Obligation) { paying.value = item; paymentOpen.value = true }

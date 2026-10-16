@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorMessage } from '../domain/errors'
 import { computed, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import MetricCard from '../components/MetricCard.vue'
@@ -15,7 +16,7 @@ const editor = ref(false), editing = ref<Debt | null>(null)
 const paymentOpen = ref(false), paying = ref<Debt | null>(null)
 function pay(record: Debt) { paying.value = record; paymentOpen.value = true }
 const total = computed(() => sum(store.debts.map(d => d.balanceCents)))
-const planned = computed(() => sum(store.debts.map(d => d.monthlyPaymentCents ?? d.minimumCents)))
+const planned = computed(() => sum(store.debts.filter(d => d.balanceCents > 0).map(d => d.monthlyPaymentCents ?? d.minimumCents)))
 const interest = computed(() => {
   const estimates = store.debts.map(d => d.balanceCents === 0 ? 0 : d.aprBasisPoints === null ? null : monthlyInterest(d.balanceCents, d.aprBasisPoints))
   return { cents: sum(estimates.map(cents => cents ?? 0)), missing: estimates.filter(cents => cents === null).length }
@@ -24,7 +25,7 @@ function open(record: Debt | null = null) { editing.value = record; editor.value
 async function remove(record: Debt) {
   if (!confirm(`Delete ${record.name}? Linked obligations will remain but be unlinked.`)) return
   try { await localRepository.deleteDebt(record.id); store.notify('Debt removed.') }
-  catch (e) { store.notify(e instanceof Error ? e.message : 'Unable to delete debt.') }
+  catch (e) { store.notify(errorMessage(e, 'Unable to delete debt.')) }
 }
 </script>
 <template>

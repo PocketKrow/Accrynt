@@ -2,6 +2,8 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegisterSW } from 'virtual:pwa-register/vue'
+import DemoControls from './components/DemoControls.vue'
+import { isDemo, workspaceUrl } from './data/workspace'
 import BrandMark from './components/BrandMark.vue'
 import { useFinanceStore } from './stores/finance'
 import { formatMoney, longMonth } from './domain/finance'
@@ -21,7 +23,14 @@ const nav = [
   { path: '/settings', title: 'Settings', icon: '⚙' }
 ]
 const active = computed(() => nav.find(n => n.path === router.currentRoute.value.path)?.title ?? 'Overview')
-const sidebarOpen = ref(false)
+const sidebarOpen = ref(false), menuButton = ref<HTMLButtonElement | null>(null)
+function skipTo(id: string) {
+  if (id === 'main-navigation') sidebarOpen.value = true
+  requestAnimationFrame(() => { document.getElementById(id)?.focus() })
+}
+function escapeMenu(event: KeyboardEvent) {
+  if (event.key === 'Escape' && sidebarOpen.value) { sidebarOpen.value = false; menuButton.value?.focus() }
+}
 watch(() => router.currentRoute.value.fullPath, () => { sidebarOpen.value = false })
 let noticeTimer: ReturnType<typeof setTimeout> | undefined
 watch(() => store.notice, message => {
@@ -31,18 +40,21 @@ watch(() => store.notice, message => {
 onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
 </script>
 <template>
-  <div class="app-root" :data-theme="store.theme">
-    <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="app-root" :data-theme="store.theme" @keydown="escapeMenu">
+    <a class="skip-link" :href="`#${router.currentRoute.value.fullPath}`" @click.prevent="skipTo('main-content')">Skip to content</a>
+    <a class="skip-link" :href="`#${router.currentRoute.value.fullPath}`" @click.prevent="skipTo('main-navigation')">Skip to navigation</a>
     <div class="application-frame">
       <div class="mobile-bar">
         <BrandMark />
-        <button class="button" type="button" :aria-expanded="sidebarOpen" aria-controls="main-navigation" @click="sidebarOpen = !sidebarOpen">{{ sidebarOpen ? 'Close' : 'Menu' }}</button>
+        <button ref="menuButton" class="button" type="button" :aria-expanded="sidebarOpen" aria-controls="main-navigation" @click="sidebarOpen = !sidebarOpen">{{ sidebarOpen ? 'Close' : 'Menu' }}</button>
       </div>
       <div class="workspace">
         <main id="main-content" class="main-content" tabindex="-1">
+          <DemoControls v-if="isDemo" />
           <div class="topbar">
             <span class="crumb">ACCRYNT / <strong>{{ active.toUpperCase() }}</strong></span>
             <div class="topbar-actions">
+              <a v-if="!isDemo" class="text-link" :href="workspaceUrl(true)">Try demo</a>
               <span class="local-indicator"><span class="dot" /> ON THIS DEVICE</span>
               <span class="top-month mono">{{ monthLabel }}</span>
               <button class="button small" type="button" :aria-label="modeLabel" @click="store.setTheme(store.theme === 'dark' ? 'light' : 'dark')">{{ store.theme === 'dark' ? '☀ Light' : '◐ Dark' }}</button>
@@ -52,7 +64,7 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
           <section v-else-if="store.error" class="error-panel" role="alert"><strong>Local storage unavailable</strong><p>{{ store.error }}</p><p>Use a supported browser with IndexedDB enabled. No data has been sent anywhere.</p><button class="button" @click="store.start()">Retry local storage</button></section>
           <RouterView v-else />
         </main>
-        <aside id="main-navigation" class="right-rail" :class="{ open: sidebarOpen }">
+        <aside id="main-navigation" class="right-rail" tabindex="-1" :class="{ open: sidebarOpen }">
           <BrandMark />
           <div class="rail-section-label">Workspace</div>
           <nav aria-label="Primary navigation" class="navigation">
@@ -63,7 +75,7 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
           <div class="rail-spacer" />
           <div class="rail-summary">
             <div class="rail-heading">{{ monthLabel }} / PLAN</div>
-            <div class="rail-metric mono">{{ formatMoney(store.summary.remainingCents) }}</div>
+            <div class="rail-metric mono" :class="{ 'rail-negative': store.summary.remainingCents < 0 }">{{ formatMoney(store.summary.remainingCents) }}</div>
             <p>Unallocated after planned outflow. Not a verified bank balance.</p>
             <div class="rail-rule" />
             <div class="rail-row"><span>Planned outflow</span><strong class="mono">{{ formatMoney(store.summary.plannedCents) }}</strong></div>

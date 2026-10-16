@@ -148,7 +148,7 @@ test('recurring bills and expected income carry forward once, preserve monthly e
   expect(exported.recurringOccurrences.find((o: { month: string; kind: string }) => o.month === '2026-11' && o.kind === 'bill').cancelled).toBe(true)
   const clear = async (d: import('@playwright/test').Dialog) => { if (d.type() === 'prompt') await d.accept('DELETE'); else await d.accept() }
   page.on('dialog', clear); await page.getByRole('button', { name: 'Delete all local records' }).click(); page.off('dialog', clear)
-  await expect(page.getByRole('button', { name: 'Load optional October example' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Load selected-month example' })).toBeVisible()
   await restore(page, exported)
   const restored = await backup(page)
   expect(restored.recurringRules).toEqual(exported.recurringRules)
