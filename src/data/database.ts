@@ -1,6 +1,7 @@
 import { databaseName } from './workspace'
 import Dexie, { type Table } from 'dexie'
-import type { MonthPlan, Obligation, Transaction, Debt, RecurringRule, RecurringOccurrence } from '../domain/models'
+import { migrateLegacyDebt } from '../domain/models'
+import type { MonthPlan, Obligation, Transaction, Debt, RecurringRule, RecurringOccurrence, BalanceEvent } from '../domain/models'
 
 export class AccryntDatabase extends Dexie {
   months!: Table<MonthPlan, string>
@@ -9,6 +10,8 @@ export class AccryntDatabase extends Dexie {
   debts!: Table<Debt, string>
   recurringRules!: Table<RecurringRule, string>
   recurringOccurrences!: Table<RecurringOccurrence, string>
+
+  balanceEvents!: Table<BalanceEvent, string>
 
   constructor(name = 'accrynt-local-v1') {
     super(name)
@@ -26,6 +29,16 @@ export class AccryntDatabase extends Dexie {
       await tx.table('months').toCollection().modify(row => { row.openingCents = null })
       await tx.table('transactions').toCollection().modify(row => { row.payment = null })
     })
+    this.version(4).stores({ ...tables, recurringRules: 'id', recurringOccurrences: 'id,month,ruleId,obligationId', balanceEvents: 'id,debtId,recordedAt,period' }).upgrade(async tx => {
+      await tx.table('debts').toCollection().modify(row => {
+        const upgraded = migrateLegacyDebt(row)
+        delete row.aprBasisPoints
+        Object.assign(row, upgraded)
+      })
+      await tx.table('transactions').toCollection().modify(row => {
+        if (row.payment) { row.payment.balanceAsOfBefore = null; row.payment.balanceAsOfAfter = null }
+      })
+    })
   }
 }
 export const db = new AccryntDatabase(databaseName)
@@ -37,7 +50,7 @@ export function readWorkspace() {
     obligations: await db.obligations.toArray(),
     transactions: await db.transactions.toArray(),
     debts: await db.debts.toArray(),
-    recurringRules: await db.recurringRules.toArray(), recurringOccurrences: await db.recurringOccurrences.toArray()
+    recurringRules: await db.recurringRules.toArray(), recurringOccurrences: await db.recurringOccurrences.toArray(), balanceEvents: await db.balanceEvents.toArray()
   }))
 }
 

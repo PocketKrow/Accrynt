@@ -1,15 +1,16 @@
 import { db } from './database'
 import { checkEdit, nextTimestamp } from './integrity'
+import { balanceRepository, statementEvent } from './balance-events'
 import { connectedRepository } from './connected'
 import { shiftMonth } from '../domain/finance'
 import {
   obligationSchema, transactionSchema, monthSchema, debtSchema,
-  monthKeySchema, newId, now,
+  monthKeySchema, newId, now, localDate,
   type MonthPlan, type Obligation, type Transaction, type Debt
 } from '../domain/models'
 
 export const localRepository = {
-  ...connectedRepository,
+  ...connectedRepository, ...balanceRepository,
   async saveIncome(month: string, incomeCents: number) {
     monthKeySchema.parse(month)
     await db.transaction('rw', db.months, async () => {
@@ -89,12 +90,14 @@ export const localRepository = {
   async saveDebt(data: Omit<Debt, 'id' | 'updatedAt'>, id?: string, expectedUpdatedAt?: string) {
     const row = debtSchema.parse({ ...data, id: id ?? newId(), updatedAt: now() })
     // Interest, fees, and new charges may legitimately push a balance above its baseline.
-    await db.transaction('rw', db.debts, async () => {
+    await db.transaction('rw', db.debts, db.balanceEvents, async () => {
       if (id) {
         const existing = await db.debts.get(id)
         checkEdit(existing, expectedUpdatedAt)
         row.updatedAt = nextTimestamp(existing.updatedAt)
+        if (row.balanceCents !== existing.balanceCents || row.balanceAsOf !== existing.balanceAsOf) await db.balanceEvents.add(statementEvent(existing, row, row.updatedAt))
       }
+      if (row.balanceAsOf && row.balanceAsOf > localDate()) throw new Error('Choose a balance reference date through today.')
       await db.debts.put(row)
     })
   },

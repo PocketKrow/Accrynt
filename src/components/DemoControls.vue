@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { errorMessage } from '../domain/errors'
 import { ref } from 'vue'
+import { currentMonth } from '../domain/models'
 import { resetDemo, type DemoScenario } from '../data/demo'
 import { workspaceUrl } from '../data/workspace'
 import { useFinanceStore } from '../stores/finance'
@@ -8,7 +9,7 @@ const store = useFinanceStore(), busy = ref(false), scenario = ref<DemoScenario>
 async function reset() {
   if (busy.value || !confirm('Reset synthetic demo records? Your personal workspace is separate and will not be changed.')) return
   busy.value = true; error.value = ''
-  try { await resetDemo(scenario.value); store.notify('Demo reset. Synthetic records restored.'); }
+  try { await resetDemo(scenario.value); store.month = scenario.value === 'february' ? `${currentMonth().slice(0,4)}-02` : currentMonth(); store.notify('Demo reset. Synthetic records restored.'); }
   catch (reason) { error.value = errorMessage(reason, 'Unable to reset demo.') }
   finally { busy.value = false }
 }
