@@ -114,9 +114,7 @@ test('backup restore roundtrips records; invalid input and cancelled deletion pr
   expect((await exportData(page)).obligations).toEqual(backup.obligations)
 })
 
-test('storage controls handle browser decisions and theme survives a reload', async ({ page, context, browserName }) => {
-  // Firefox shows a native permission prompt; grant it explicitly in this isolated test profile.
-  if (browserName === 'firefox') await context.grantPermissions(['persistent-storage'], { origin: 'http://127.0.0.1:4173' })
+test('storage controls handle browser decisions and theme survives a reload', async ({ page }) => {
   await goSettings(page)
   await page.getByRole('button', { name: 'Check', exact: true }).click()
   await expect(page.getByText(/MB used|Storage estimate unavailable/)).toBeVisible()

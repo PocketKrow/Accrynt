@@ -16,7 +16,10 @@ export default defineConfig({
         args: ['--no-sandbox', '--disable-dev-shm-usage']
       } : undefined
     } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } }
+    { name: 'firefox', use: { ...devices['Desktop Firefox'],
+      // Resolve the native permission dialog in disposable test profiles only.
+      launchOptions: { firefoxUserPrefs: { 'permissions.default.persistent-storage': 1 } }
+    } }
   ],
   webServer: {
     command: 'npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',
