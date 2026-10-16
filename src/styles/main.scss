@@ -5,7 +5,7 @@ body{margin:0;background:#101519}
 button,input,select{font:inherit}
 button{cursor:pointer}
 button:disabled{cursor:not-allowed;opacity:.55}
-button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 a{color:inherit;text-decoration:none}
 input,select{min-width:0}
 .mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
@@ -150,6 +150,26 @@ input,select{min-width:0}
 .debt-facts{display:grid;gap:11px;margin:24px 0 20px}
 .debt-facts>div{display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:11px}
 .debt-facts span{color:var(--muted)}
+.debt-card{min-width:0;align-self:start}
+.debt-forecast{border-top:1px solid var(--line);padding-top:17px;margin:18px 0;min-width:0}
+.forecast-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px 12px;margin:14px 0}
+.forecast-stats dt,.forecast-details dt{font-size:10px;line-height:1.5;color:var(--muted)}
+.forecast-stats dd,.forecast-details dd{margin:5px 0 0;font-size:15px;font-weight:750;overflow-wrap:anywhere}
+.forecast-payoff{grid-column:1/-1}
+.forecast-payoff dd{font-size:13px}
+.debt-forecast summary{cursor:pointer;font-size:11px;color:var(--accent);padding:9px 0;line-height:1.5}
+.forecast-details{min-width:0}
+.forecast-details .debt-facts{margin:12px 0 17px}
+.forecast-details .debt-facts>div{align-items:baseline}
+.forecast-details .debt-facts dd{font-size:11px;text-align:right;flex-shrink:0}
+.forecast-table{margin-top:16px;max-width:100%}
+.forecast-table .data-table{min-width:470px;font-size:10px}
+.forecast-table .data-table caption{text-align:left;padding:0 0 10px;color:var(--muted)}
+.forecast-table .data-table td:nth-child(2){min-width:0}
+.forecast-table .data-table tbody th{border-top:1px solid var(--line);font-weight:500}
+.forecast-pagination{display:flex;align-items:center;justify-content:space-between;gap:7px;flex-wrap:wrap;margin-top:12px}
+.forecast-pagination .button{font-size:10px;padding:7px 8px}
+.modal-panel .debt-forecast{margin:0}
 .meter-block{margin-top:22px}.meter-annotation{display:flex;justify-content:space-between;gap:12px;font-size:10px;margin-bottom:8px}
 .empty-panel p{font-size:11px;color:var(--muted);line-height:1.6}
 .reports-grid{grid-template-columns:minmax(0,1.2fr) minmax(260px,.9fr)}

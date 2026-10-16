@@ -54,6 +54,7 @@ export const debtSchema = z.object({
   balanceCents: money,
   startingBalanceCents: money.nullable(),
   minimumCents: money,
+  monthlyPaymentCents: money.nullable(),
   aprBasisPoints: z.number().int().min(0).max(100_000).nullable(),
   updatedAt: z.string().datetime()
 }).strict()
@@ -61,7 +62,7 @@ export type Debt = z.infer<typeof debtSchema>
 
 export const backupSchema = z.object({
   format: z.literal('accrynt-portable'),
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   exportedAt: z.string().datetime(),
   months: z.array(monthSchema).max(1200),
   obligations: z.array(obligationSchema).max(100_000),
@@ -69,6 +70,16 @@ export const backupSchema = z.object({
   debts: z.array(debtSchema).max(10_000)
 }).strict()
 export type Backup = z.infer<typeof backupSchema>
+
+// V1 exports predate saved payment plans. Strict validation still applies before migration.
+const legacyBackupSchema = backupSchema.extend({
+  schemaVersion: z.literal(1),
+  debts: z.array(debtSchema.omit({ monthlyPaymentCents: true })).max(10_000)
+})
+export const portableBackupSchema = z.union([backupSchema, legacyBackupSchema]).transform((data): Backup => ({
+  ...data, schemaVersion: 2,
+  debts: data.debts.map(debt => ({ ...debt, monthlyPaymentCents: 'monthlyPaymentCents' in debt ? debt.monthlyPaymentCents : null }))
+}))
 
 export const now = () => new Date().toISOString()
 export const newId = () => crypto.randomUUID()
