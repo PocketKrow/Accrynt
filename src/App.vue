@@ -5,8 +5,10 @@ import { useRegisterSW } from 'virtual:pwa-register/vue'
 import DemoControls from './components/DemoControls.vue'
 import { isDemo, workspaceUrl } from './data/workspace'
 import BrandMark from './components/BrandMark.vue'
+import StorageRecovery from './components/StorageRecovery.vue'
 import { useFinanceStore } from './stores/finance'
 import { formatMoney, longMonth } from './domain/finance'
+import { approveWorkspaceReload } from './domain/update'
 
 const store = useFinanceStore()
 const router = useRouter()
@@ -14,6 +16,9 @@ store.start()
 const modeLabel = computed(() => store.theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode')
 const monthLabel = computed(() => longMonth(store.month))
 const { needRefresh, updateServiceWorker } = useRegisterSW()
+function applyUpdate() {
+  if (approveWorkspaceReload(document, () => confirm('A form is open. Updating reloads Accrynt and discards any unsaved entries in it. Update now?'))) void updateServiceWorker()
+}
 const nav = [
   { path: '/', title: 'Overview', icon: '▦' },
   { path: '/plan', title: 'Monthly Plan', icon: '☷' },
@@ -61,8 +66,8 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
             </div>
           </div>
           <div v-if="!store.loaded" class="loading-state" role="status">Opening local workspace…</div>
-          <section v-else-if="store.error" class="error-panel" role="alert"><strong>Local storage unavailable</strong><p>{{ store.error }}</p><p>Use a supported browser with IndexedDB enabled. No data has been sent anywhere.</p><button class="button" @click="store.start()">Retry local storage</button></section>
-          <template v-else><section v-if="store.operationError" class="error-panel" role="alert"><strong>Action could not complete</strong><p>{{ store.operationError }}</p><button class="button small" @click="store.dismissError()">Dismiss error</button></section><section v-if="store.planIncomplete" class="error-panel" role="alert"><strong>Monthly plan may be incomplete</strong><p>Recurring items for this month have not finished generating. Planned totals and available-after-bills estimates may omit items. Recorded Ledger entries remain live.</p><p v-if="store.recurrenceWarning">{{ store.recurrenceWarning }}</p><button v-if="store.recurrenceWarning" class="button small" @click="store.retryRecurrence()">Retry recurring items</button></section><RouterView /></template>
+          <section v-else-if="store.error" class="error-panel"><div role="alert"><strong>Local storage unavailable</strong><p>{{ store.error }}</p><p>Use a supported browser with IndexedDB enabled. No data has been sent anywhere.</p></div><button class="button" @click="store.start()">Retry local storage</button><StorageRecovery /></section>
+          <template v-else><section v-if="store.operationError" class="error-panel" role="alert"><strong>Action could not complete</strong><p>{{ store.operationError }}</p><button class="button small" @click="store.dismissError()">Dismiss error</button></section><section v-if="store.recurrenceWarning" class="error-panel" role="alert"><strong>Monthly plan may be incomplete</strong><p>Recurring items for this month could not finish generating. Planned totals and available-after-bills estimates may omit items. Recorded Ledger entries remain live.</p><p>{{ store.recurrenceWarning }}</p><button class="button small" @click="store.retryRecurrence()">Retry recurring items</button></section><p v-else-if="store.planIncomplete" class="preparing-plan" role="status">Preparing this month’s recurring items… Plan totals may still change.</p><RouterView /></template>
         </main>
         <aside id="main-navigation" class="right-rail" tabindex="-1" :class="{ open: sidebarOpen }">
           <BrandMark />
@@ -74,18 +79,19 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
           </nav>
           <div class="rail-spacer" />
           <div class="rail-summary">
-            <p v-if="store.planIncomplete" class="error-message">Plan incomplete · retry recurring items</p><div class="rail-heading">{{ monthLabel }} / PLAN</div>
+            <p v-if="store.recurrenceWarning" class="error-message">Plan incomplete · retry recurring items</p><p v-else-if="store.planIncomplete" role="status">Preparing recurring items…</p><div class="rail-heading">{{ monthLabel }} / PLAN</div>
+            <div class="rail-metric-label">Unallocated planned income</div>
             <div class="rail-metric mono" :class="{ 'rail-negative': store.summary.remainingCents < 0 }">{{ formatMoney(store.summary.remainingCents) }}</div>
-            <p>Unallocated after planned outflow. Not a verified bank balance.</p>
+            <p>Expected income minus planned bills. Separate from recorded available cash.</p>
             <div class="rail-rule" />
             <div class="rail-row"><span>Planned outflow</span><strong class="mono">{{ formatMoney(store.summary.plannedCents) }}</strong></div>
             <div class="rail-row"><span>Unpaid items</span><strong class="mono">{{ store.summary.unpaidCount }}</strong></div>
           </div>
-          <div class="rail-footer"><span class="dot" /> PRIVATE BY DESIGN <span class="mono">v0.6</span></div>
+          <div class="rail-footer"><span class="dot" /> PRIVATE BY DESIGN <span class="mono">v0.7</span></div>
         </aside>
       </div>
     </div>
     <div v-if="store.notice" class="toast" role="status" aria-live="polite">{{ store.notice }}</div>
-    <div v-if="needRefresh" class="update-banner" role="status">An offline app update is available. <button class="button primary" @click="updateServiceWorker()">Update and reload</button></div>
+    <div v-if="needRefresh" class="update-banner" role="status">An offline app update is available. <button class="button primary" @click="applyUpdate">Update and reload</button></div>
   </div>
 </template>

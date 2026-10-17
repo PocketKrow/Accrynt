@@ -121,7 +121,7 @@ export const localRepository = {
       await db.debts.delete(id)
     })
   },
-  async copyPreviousMonth(target: string) {
+  async copyPreviousMonth(target: string, options: { copyAdditionalIncome?: boolean } = {}) {
     monthKeySchema.parse(target)
     const key = shiftMonth(target, -1)
     await db.transaction('rw', db.months, db.obligations, db.recurringOccurrences, async () => {
@@ -133,7 +133,8 @@ export const localRepository = {
       const source = (await db.obligations.where('month').equals(key).toArray()).filter(o => !generated.has(o.id))
       const month = await db.months.get(key)
       if (!month && !source.length) throw new Error('There is no previous month to copy.')
-      await db.months.put({ key: target, incomeCents: currentConfig?.incomeCents || month?.incomeCents || 0, openingCents: currentConfig?.openingCents ?? null, updatedAt: currentConfig ? nextTimestamp(currentConfig.updatedAt) : now() })
+      const copyIncome = options.copyAdditionalIncome ?? !currentConfig
+      await db.months.put({ key: target, incomeCents: copyIncome ? month?.incomeCents ?? 0 : currentConfig?.incomeCents ?? 0, openingCents: currentConfig?.openingCents ?? null, updatedAt: currentConfig ? nextTimestamp(currentConfig.updatedAt) : now() })
       if (source.length) await db.obligations.bulkAdd(source.map(row => ({
         ...row, id: newId(), month: target, paidAt: null, updatedAt: now()
       })))

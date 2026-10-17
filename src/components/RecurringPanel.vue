@@ -8,6 +8,7 @@ import { useFinanceStore } from '../stores/finance'
 import TransactionForm from './TransactionForm.vue'
 
 const store = useFinanceStore(), dialog = ref<HTMLDialogElement | null>(null)
+const incomePanel = ref<HTMLElement | null>(null)
 const open = ref(false), busy = ref(false), error = ref('')
 const editing = ref<RecurringRule | null>(null), occurrence = ref<RecurringOccurrence | null>(null)
 const sourceBill = ref<Obligation | null>(null)
@@ -31,7 +32,8 @@ function repeatBill(bill: Obligation) {
   Object.assign(form, { name: bill.name, kind: 'bill', amount: (bill.plannedCents / 100).toFixed(2),
     category: bill.category, day: bill.dueDay?.toString() ?? '', debtId: bill.debtId ?? '', start: bill.month })
 }
-defineExpose({ repeatBill })
+function focusIncome() { incomePanel.value?.focus(); incomePanel.value?.scrollIntoView({ block: 'start' }) }
+defineExpose({ repeatBill, focusIncome })
 watch(open, async value => { await nextTick(); if (value && !dialog.value?.open) dialog.value?.showModal(); if (!value && dialog.value?.open) dialog.value.close() })
 async function submit() {
   if (busy.value) return
@@ -64,7 +66,7 @@ async function skip(entry: RecurringOccurrence) {
 function receive(entry: RecurringOccurrence) { receiptSeed.value = { name: entry.name, amountCents: receipt(entry).remainingCents || entry.amountCents, kind: 'income', incomeOccurrenceId: entry.id }; receiptOpen.value = true }
 </script>
 <template>
-  <section v-if="store.expectedOccurrences.length" class="panel expected-income-panel">
+  <section v-if="store.expectedOccurrences.length" ref="incomePanel" tabindex="-1" aria-label="Scheduled income" class="panel expected-income-panel">
     <div class="panel-heading"><div><span class="eyebrow">SCHEDULED INCOME · PLAN & RECEIPTS</span><h2>Scheduled income · {{ store.month }}</h2></div></div>
     <div v-for="entry in store.expectedOccurrences" :key="entry.id" class="scheduled-row">
       <div><strong>{{ entry.name }}</strong><small>{{ entry.cancelled ? 'Skipped this month' : entry.dueDay ? `Expected ${dueDate(store.month, entry.dueDay)}` : 'Date not set' }}</small></div>
