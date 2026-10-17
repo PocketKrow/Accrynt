@@ -5,7 +5,7 @@ import { portableBackupSchema, now, type Backup } from '../domain/models'
 
 export async function exportBackup(): Promise<Backup> {
   const data: Backup = {
-    format: 'accrynt-portable', schemaVersion: 4, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(),
+    format: 'accrynt-portable', schemaVersion: 5, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(),
     ...await readWorkspace()
   }
   return validateBackup(data)
@@ -45,6 +45,10 @@ export function validateBackup(content: unknown): Backup {
           p.balanceBeforeCents === null || p.balanceAfterCents === null || p.principalCents + p.interestCents !== row.amountCents ||
           p.balanceBeforeCents - p.principalCents - (p.interestIncludedInBalance ? p.interestCents : 0) !== p.balanceAfterCents))) throw new Error('Backup has an invalid payment receipt.')
     }
+  }
+  const occurrencesById = new Map(data.recurringOccurrences.map(row => [row.id, row]))
+  for (const row of data.transactions) {
+    if (row.incomeOccurrenceId != null && (row.kind !== 'income' || occurrencesById.get(row.incomeOccurrenceId)?.kind !== 'income')) throw new Error('Income receipt has a missing or incompatible occurrence link.')
   }
   const rulesById = new Map(data.recurringRules.map(row => [row.id, row])), generatedBills = new Set<string>()
   for (const rule of data.recurringRules) if (rule.debtId !== null && !debtIds.has(rule.debtId)) throw new Error('Recurring rule links to a missing debt.')
@@ -89,7 +93,7 @@ export function downloadFile(filename: string, content: string, mime = 'applicat
 
 /** Recovery-only envelope: preserves corrupt rows without mislabelling them a portable backup. */
 export async function recoverySnapshot() {
-  const current = { format: 'accrynt-portable', schemaVersion: 4, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(), ...await readWorkspace() }
+  const current = { format: 'accrynt-portable', schemaVersion: 5, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(), ...await readWorkspace() }
   try { return { raw: false, data: validateBackup(current) } }
   catch { return { raw: true, data: { ...current, format: 'accrynt-raw-recovery', warning: 'UNVALIDATED recovery data. Not directly restorable. Preserve this file for manual repair.' } } }
 }

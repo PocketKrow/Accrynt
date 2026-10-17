@@ -1,0 +1,9 @@
+# ADR 0002 — explicit income receipt links
+
+Accepted 2026-10-17. A Ledger income row may carry `incomeOccurrenceId`, the deterministic ID of an income occurrence selected by the user. Never infer links from names, dates, accounts or amounts. Existing rows remain unlinked. Multiple/partial/excess receipts are allowed; the whole deposit belongs to one occurrence. To allocate across occurrences, record separate deposits deliberately.
+
+Received and scheduled amounts are derived from linked transactions using the same reference-date cutoff as actual cash. Receiving, editing or deleting a receipt never changes monthly expected income. Skipping an occurrence only removes it from planned income; its actual receipts and links remain. Restoring the plan restores its prior expected amount. Generic unlinked deposits remain actual income. Link or unlink existing deposits in the Ledger editor; changing type removes the link.
+
+Native Dexie remains v4: no new table/index is required, and missing optional link fields mean unlinked. No migration rewrites saved records. Portable exports advance independently to v5 because strict older readers must not accept a field they cannot preserve. v1–v4 import remains explicit and normalizes missing links to null. v5 validates link existence and occurrence kind. Restore remains one all-table transaction; raw recovery is separate and never directly importable. Native reopen uses the same v4 schema. Older app builds must not edit new linked data; preserve a pre-update export if rollback is needed.
+
+New transaction requests carry a stable UUID for exactly-once retry on ambiguous saves. Same UUID with different payload is rejected atomically; a deliberate extra receipt uses a new form/request and is permitted. Existing edit timestamps still guard stale forms.

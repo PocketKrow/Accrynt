@@ -51,14 +51,27 @@ export const localRepository = {
       await db.obligations.delete(id)
     })
   },
-  async saveTransaction(data: Omit<Transaction, 'id' | 'updatedAt' | 'payment'>, id?: string, expectedUpdatedAt?: string) {
-    const row = transactionSchema.parse({ ...data, payment: null, id: id ?? newId(), updatedAt: now() })
+  async saveTransaction(data: Omit<Transaction, 'id' | 'updatedAt' | 'payment'>, id?: string, expectedUpdatedAt?: string, options: { requestId?: string } = {}) {
+    const row = transactionSchema.parse({ ...data, payment: null, id: id ?? options.requestId ?? newId(), updatedAt: now() })
     if (row.amountCents <= 0) throw new Error('A new or edited transaction must have an amount greater than zero.')
+    if (row.incomeOccurrenceId && row.kind !== 'income') throw new Error('Only income can link to an income occurrence.')
     if (row.kind === 'income' && row.obligationId) throw new Error('Income cannot be linked to a payment obligation.')
     if (row.kind === 'debt-payment' && row.category !== 'Debt payments') {
       throw new Error('Debt payments must use the Debt payments category.')
     }
-    await db.transaction('rw', db.transactions, db.obligations, async () => {
+    await db.transaction('rw', db.transactions, db.obligations, db.recurringOccurrences, async () => {
+      if (!id) {
+        const previous = await db.transactions.get(row.id)
+        if (previous) {
+          const keys = ['date', 'name', 'kind', 'category', 'amountCents', 'account', 'obligationId', 'incomeOccurrenceId'] as const
+          if (!previous.payment && keys.every(key => (previous[key] ?? null) === (row[key] ?? null))) return
+          throw new Error('This transaction request was already used. Close and reopen the form.')
+        }
+      }
+      if (row.incomeOccurrenceId) {
+        const occurrence = await db.recurringOccurrences.get(row.incomeOccurrenceId)
+        if (!occurrence || occurrence.kind !== 'income') throw new Error('The selected income occurrence no longer exists. Remove or change its link.')
+      }
       let previousObligationId: string | null = null
       if (id) {
         const existing = await db.transactions.get(id)
