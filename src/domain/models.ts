@@ -9,6 +9,7 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
   actual.setUTCFullYear(year, month - 1, day)
   return actual.getUTCFullYear() === year && actual.getUTCMonth() === month - 1 && actual.getUTCDate() === day
 }, 'Invalid calendar date')
+export const transactionDateSchema = date
 export const monthKeySchema = z.string().regex(/^(?!0000)\d{4}-(0[1-9]|1[0-2])$/)
 export const categorySchema = z.enum(['Housing', 'Utilities', 'Insurance', 'Subscriptions', 'Debt payments', 'Groceries', 'Transport', 'Healthcare', 'Other'])
 export type Category = z.infer<typeof categorySchema>
@@ -47,17 +48,20 @@ const legacyTransactionSchema = z.object({
   obligationId: id.nullable(),
   updatedAt: z.string().datetime()
 }).strict()
-export const paymentReceiptSchema = z.object({
+const legacyPaymentReceiptSchema = z.object({
   recordedAt: z.string().datetime(),
   debtId: id.nullable(), debtName: z.string().max(100).nullable(),
   principalCents: money, interestCents: money,
   interestIncludedInBalance: z.boolean().default(false),
   balanceBeforeCents: money.nullable(), balanceAfterCents: money.nullable()
 }).strict()
+export const paymentReceiptSchema = legacyPaymentReceiptSchema.extend({
+  balanceAsOfBefore: date.nullable().default(null), balanceAsOfAfter: date.nullable().default(null)
+})
 export const transactionSchema = legacyTransactionSchema.extend({ payment: paymentReceiptSchema.nullable() })
 export type Transaction = z.infer<typeof transactionSchema>
 
-export const debtSchema = z.object({
+export const legacyDebtSchema = z.object({
   id,
   name: z.string().trim().min(2).max(100),
   balanceCents: money,
@@ -67,7 +71,30 @@ export const debtSchema = z.object({
   aprBasisPoints: z.number().int().min(0).max(100_000).nullable(),
   updatedAt: z.string().datetime()
 }).strict()
+export const interestMethodSchema = z.enum(['monthly', 'daily-365', 'daily-360'])
+export const debtSchema = legacyDebtSchema.omit({ aprBasisPoints: true }).extend({
+  aprMilliPercent: z.number().int().min(0).max(1_000_000).nullable(),
+  balanceAsOf: date.nullable(), interestMethod: interestMethodSchema
+})
 export type Debt = z.infer<typeof debtSchema>
+export function migrateLegacyDebt(debt: z.infer<typeof legacyDebtSchema>): Debt {
+  const { aprBasisPoints, ...rest } = legacyDebtSchema.parse(debt)
+  return { ...rest, aprMilliPercent: aprBasisPoints === null ? null : aprBasisPoints * 10, balanceAsOf: null, interestMethod: 'monthly' }
+}
+export const balanceEventSchema = z.object({
+  id: z.string().min(1).max(150), debtId: id, debtName: z.string().min(2).max(100),
+  kind: z.enum(['statement','interest','fee','purchase','refund']), date,
+  recordedAt: z.string().datetime(), reversedAt: z.string().datetime().nullable(),
+  balanceBeforeCents: money, balanceAfterCents: money,
+  deltaCents: z.number().int().min(-99_999_999_999).max(99_999_999_999),
+  previousBalanceAsOf: date.nullable(), balanceAsOf: date.nullable(),
+  note: z.string().trim().min(2).max(200), period: monthKeySchema.nullable(),
+  rateMilliPercent: z.number().int().min(0).max(1_000_000).nullable()
+}).strict().refine(e => e.balanceBeforeCents + e.deltaCents === e.balanceAfterCents, 'Balance event does not reconcile.')
+  .refine(e => (e.kind !== 'fee' && e.kind !== 'purchase') || e.deltaCents > 0, 'Charges must be positive.')
+  .refine(e => e.kind !== 'refund' || e.deltaCents < 0, 'Refunds must be negative.')
+  .refine(e => e.kind !== 'interest' || e.deltaCents >= 0, 'Interest cannot be negative.')
+export type BalanceEvent = z.infer<typeof balanceEventSchema>
 
 export const recurringRuleSchema = z.object({
   id, name: z.string().trim().min(2).max(100), kind: z.enum(['bill', 'income']),
@@ -93,28 +120,33 @@ const v2BackupSchema = z.object({
   months: z.array(legacyMonthSchema).max(1200),
   obligations: z.array(obligationSchema).max(100_000),
   transactions: z.array(legacyTransactionSchema).max(200_000),
-  debts: z.array(debtSchema).max(10_000)
+  debts: z.array(legacyDebtSchema).max(10_000)
 }).strict()
-export const backupSchema = v2BackupSchema.extend({
+const v3BackupSchema = v2BackupSchema.extend({
   schemaVersion: z.literal(3), months: z.array(monthSchema).max(1200),
-  transactions: z.array(transactionSchema).max(200_000),
+  transactions: z.array(legacyTransactionSchema.extend({ payment: legacyPaymentReceiptSchema.nullable() })).max(200_000),
   recurringRules: z.array(recurringRuleSchema).max(10_000),
   recurringOccurrences: z.array(recurringOccurrenceSchema).max(100_000)
+})
+export const backupSchema = v3BackupSchema.extend({
+  schemaVersion: z.literal(4), workspace: z.enum(['personal', 'demo-synthetic']),
+  debts: z.array(debtSchema).max(10_000), transactions: z.array(transactionSchema).max(200_000),
+  balanceEvents: z.array(balanceEventSchema).max(100_000)
 })
 export type Backup = z.infer<typeof backupSchema>
 
 // V1 exports predate saved payment plans. Strict validation still applies before migration.
 const legacyBackupSchema = v2BackupSchema.extend({
   schemaVersion: z.literal(1),
-  debts: z.array(debtSchema.omit({ monthlyPaymentCents: true })).max(10_000)
+  debts: z.array(legacyDebtSchema.omit({ monthlyPaymentCents: true })).max(10_000)
 })
-export const portableBackupSchema = z.union([backupSchema, v2BackupSchema, legacyBackupSchema]).transform((data): Backup => {
-  if (data.schemaVersion === 3) return data
-  return { ...data, schemaVersion: 3,
-    months: data.months.map(month => ({ ...month, openingCents: null })),
-    transactions: data.transactions.map(row => ({ ...row, payment: null })),
-    debts: data.debts.map(debt => ({ ...debt, monthlyPaymentCents: 'monthlyPaymentCents' in debt ? debt.monthlyPaymentCents : null })),
-    recurringRules: [], recurringOccurrences: [] }
+export const portableBackupSchema = z.union([backupSchema, v3BackupSchema, v2BackupSchema, legacyBackupSchema]).transform((data): Backup => {
+  if (data.schemaVersion === 4) return data
+  return { ...data, schemaVersion: 4, workspace: 'personal', balanceEvents: [],
+    months: data.months.map(month => ({ ...month, openingCents: 'openingCents' in month ? month.openingCents : null })),
+    transactions: data.transactions.map(row => transactionSchema.parse({ ...row, payment: 'payment' in row ? row.payment : null })),
+    debts: data.debts.map(debt => migrateLegacyDebt({ ...debt, monthlyPaymentCents: 'monthlyPaymentCents' in debt ? debt.monthlyPaymentCents : null })),
+    recurringRules: 'recurringRules' in data ? data.recurringRules : [], recurringOccurrences: 'recurringOccurrences' in data ? data.recurringOccurrences : [] }
 })
 
 export const now = () => new Date().toISOString()

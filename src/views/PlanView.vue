@@ -35,22 +35,22 @@ async function saveIncome() {
   if (cents === null) { store.notify('Enter a valid income amount.'); return }
   busy.value = true
   try { await localRepository.saveIncome(targetMonth, cents); editingIncome.value = false; store.notify('Expected income saved.') }
-  catch (e) { store.notify(errorMessage(e, 'Unable to save income.')) }
+  catch (e) { store.fail(errorMessage(e, 'Unable to save income.')) }
   finally { busy.value = false }
 }
 async function toggle(record: Obligation) {
   try { await localRepository.setObligationPaid(record.id, !record.paidAt) }
-  catch (e) { store.notify(errorMessage(e, 'Unable to update status.')) }
+  catch (e) { store.fail(errorMessage(e, 'Unable to update status.')) }
 }
 async function remove(record: Obligation) {
   if (!confirm(`Delete ${record.name} from ${store.month}? Linked ledger entries will stay, but their plan links will be removed.`)) return
   try { await localRepository.deleteObligation(record.id); store.notify('Obligation deleted.') }
-  catch (e) { store.notify(errorMessage(e, 'Unable to delete.')) }
+  catch (e) { store.fail(errorMessage(e, 'Unable to delete.')) }
 }
 async function copyPrevious() {
   if (!confirm('Copy the previous month’s non-recurring obligations and additional income? Existing nonzero additional income and opening cash are kept. Paid statuses reset. Recurring items are generated separately.')) return
   try { await localRepository.copyPreviousMonth(store.month); store.notify('Previous plan copied. Opening cash and existing nonzero additional income were preserved.') }
-  catch (e) { store.notify(errorMessage(e, 'Cannot copy previous month.')) }
+  catch (e) { store.fail(errorMessage(e, 'Cannot copy previous month.')) }
 }
 </script>
 <template>
@@ -67,7 +67,7 @@ async function copyPrevious() {
     <div class="panel-heading"><div><span class="eyebrow">OBLIGATION REGISTER</span><h2>Planned payments</h2></div><button v-if="canCopy" class="button small" @click="copyPrevious">Copy previous month</button></div>
     <div class="table-controls"><input v-model="query" aria-label="Search obligations" placeholder="Search obligations…" /><select v-model="filter" aria-label="Filter payment status"><option value="all">All statuses</option><option value="paid">Paid</option><option value="unpaid">Unpaid</option></select></div>
     <div class="table-scroll"><table class="data-table"><thead><tr><th>Status</th><th>Obligation</th><th>Category</th><th>Due</th><th class="number">Amount</th><th>Actions</th></tr></thead><tbody>
-      <tr v-for="record in rows" :key="record.id"><td><label class="checkbox-label"><input type="checkbox" :checked="state(record).paid" :disabled="state(record).paid && !record.paidAt" :aria-label="`Mark ${record.name} paid`" @change="toggle(record)"/><span>{{ state(record).status }}</span></label></td><td class="weight-medium">{{ record.name }}<small v-if="state(record).recordedCents" class="cell-sub">{{ formatMoney(state(record).recordedCents) }} recorded · {{ formatMoney(state(record).remainingCents) }} remaining</small></td><td>{{ record.category }}</td><td>{{ record.dueDay ? dueDate(record.month, record.dueDay) : '—' }}</td><td class="number mono">{{ formatMoney(record.plannedCents) }}</td><td><div class="row-actions"><button v-if="!state(record).paid" class="text-link" @click="pay(record)">Record payment</button><button class="text-link" @click="openForm(record)">Edit</button><button v-if="!isRecurring(record)" class="text-link" @click="recurringPanel?.repeatBill(record)">Repeat monthly</button><button class="text-link danger-link" @click="remove(record)">Delete</button></div></td></tr>
+      <tr v-for="record in rows" :key="record.id"><td><label class="checkbox-label"><input type="checkbox" :checked="state(record).paid" :disabled="state(record).paid && !record.paidAt" :aria-label="`Mark ${record.name} paid`" @change="toggle(record)"/><span>{{ state(record).status }}</span></label></td><td class="weight-medium">{{ record.name }}<small v-if="state(record).recordedCents" class="cell-sub">{{ formatMoney(state(record).recordedCents) }} recorded · {{ formatMoney(state(record).remainingCents) }} remaining</small></td><td>{{ record.category }}</td><td>{{ record.dueDay ? dueDate(record.month, record.dueDay) : '—' }}</td><td class="number mono">{{ formatMoney(record.plannedCents) }}</td><td><div class="row-actions"><button v-if="!state(record).paid" class="text-link" :aria-label="`Record payment ${record.name}`" @click="pay(record)">Record payment</button><button class="text-link" :aria-label="`Edit ${record.name}`" @click="openForm(record)">Edit</button><button v-if="!isRecurring(record)" class="text-link" @click="recurringPanel?.repeatBill(record)">Repeat monthly</button><button class="text-link danger-link" :aria-label="`Delete ${record.name}`" @click="remove(record)">Delete</button></div></td></tr>
       <tr v-if="!rows.length"><td colspan="6" class="empty-cell">No matching obligations. Add one to start your monthly plan.</td></tr>
     </tbody></table></div>
     <p class="fine-print">Record payment adds actual outflow once and updates payment status. The checkbox is a manual confirmation for entries tracked elsewhere; it does not record outflow. Payments recorded in the Ledger cannot be unchecked here.</p>

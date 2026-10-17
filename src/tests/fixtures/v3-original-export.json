@@ -1,0 +1,63 @@
+{
+  "format": "accrynt-portable",
+  "schemaVersion": 3,
+  "exportedAt": "2026-10-16T19:19:56.371Z",
+  "months": [
+    {
+      "key": "2026-01",
+      "incomeCents": 0,
+      "updatedAt": "2026-10-16T19:19:56.363Z",
+      "openingCents": 50000
+    }
+  ],
+  "obligations": [
+    {
+      "id": "b2c6b5fa-4377-4497-bc61-4bf053bb38b7",
+      "month": "2026-01",
+      "name": "Historical fixture bill",
+      "category": "Debt payments",
+      "plannedCents": 12000,
+      "dueDay": 31,
+      "paidAt": null,
+      "debtId": "ab000000-0000-4000-8000-000000000001",
+      "updatedAt": "2026-10-16T19:19:56.370Z"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "ab000000-0000-4000-8000-000000000002",
+      "date": "2026-01-15",
+      "name": "Historical fixture payment",
+      "kind": "debt-payment",
+      "category": "Debt payments",
+      "amountCents": 10000,
+      "account": "Synthetic checking",
+      "obligationId": "b2c6b5fa-4377-4497-bc61-4bf053bb38b7",
+      "updatedAt": "2026-10-16T19:19:56.365Z",
+      "payment": {
+        "recordedAt": "2026-10-16T19:19:56.365Z",
+        "debtId": "ab000000-0000-4000-8000-000000000001",
+        "debtName": "Historical fixture loan",
+        "principalCents": 9000,
+        "interestCents": 1000,
+        "interestIncludedInBalance": false,
+        "balanceBeforeCents": 100000,
+        "balanceAfterCents": 91000
+      }
+    }
+  ],
+  "debts": [
+    {
+      "id": "ab000000-0000-4000-8000-000000000001",
+      "name": "Historical fixture loan",
+      "balanceCents": 91000,
+      "startingBalanceCents": 150000,
+      "minimumCents": 10000,
+      "monthlyPaymentCents": 12000,
+      "aprBasisPoints": 1200,
+      "updatedAt": "2026-10-16T19:19:56.365Z"
+    }
+  ],
+  "recurringRules": [],
+  "recurringOccurrences": []
+}

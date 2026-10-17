@@ -11,7 +11,7 @@ import { localDate, newId, now, type Debt, type Obligation, type RecurringRule, 
 import { useFinanceStore } from '../stores/finance'
 
 const debt = (): Debt => ({ id: newId(), name: 'Synthetic card', balanceCents: 100000, startingBalanceCents: 100000,
-  minimumCents: 10000, monthlyPaymentCents: null, aprBasisPoints: 1200, updatedAt: now() })
+  minimumCents: 10000, monthlyPaymentCents: null, aprMilliPercent: 12000, balanceAsOf: null, interestMethod: 'monthly', updatedAt: now() })
 const bill = (debtId: string | null = null): Obligation => ({ id: newId(), name: 'Synthetic bill', month: '2026-01', category: 'Debt payments',
   plannedCents: 15000, paidAt: null, dueDay: 31, debtId, updatedAt: now() })
 const rule = (kind: 'bill' | 'income' = 'bill'): RecurringRule => ({ id: newId(), name: `Synthetic ${kind}`, kind, amountCents: 20000,
@@ -214,7 +214,7 @@ describe('cashflow and comparisons', () => {
     expect(result.paymentCents).toBe(12500)
     expect(result.improved.months).toBeLessThan(result.base.months!)
     expect(result.interestSavedCents).toBeGreaterThan(0)
-    expect(compareExtraPayment({ ...input, aprBasisPoints: null }, 2500).interestSavedCents).toBeNull()
+    expect(compareExtraPayment({ ...input, aprMilliPercent: null }, 2500).interestSavedCents).toBeNull()
     expect(compareExtraPayment({ ...input, monthlyPaymentCents: 0 }, 2500).monthsSaved).toBeNull()
     expect(() => compareExtraPayment(input, 99_999_999_999)).toThrow()
     expect(input.monthlyPaymentCents).toBeNull()
@@ -234,7 +234,7 @@ describe('v3 data recovery', () => {
     const { payment: _receipt, ...oldTransaction } = transaction()
     const data = { format: 'accrynt-portable', schemaVersion: 2, exportedAt: now(),
       months: [{ key: '2026-01', incomeCents: 12345, updatedAt: now() }],
-      obligations: [], transactions: [oldTransaction], debts: [{ ...debt(), monthlyPaymentCents: 12345 }] }
+      obligations: [], transactions: [oldTransaction], debts: [(() => { const { aprMilliPercent, balanceAsOf: _date, interestMethod: _method, ...rest } = debt(); return { ...rest, aprBasisPoints: aprMilliPercent! / 10, monthlyPaymentCents: 12345 } })()] }
     await restoreBackup(data)
     const exported = await exportBackup()
     expect(exported.months[0]).toMatchObject({ incomeCents: 12345, openingCents: null })
@@ -263,7 +263,7 @@ describe('v3 data recovery', () => {
     const month = { key: '2026-01', incomeCents: 50000, updatedAt: now() }
     try {
       old.version(2).stores({ months: 'key', obligations: 'id,month,category,paidAt,debtId', transactions: 'id,date,kind,category,obligationId', debts: 'id' })
-      await old.open(); await old.table('debts').add(d); await old.table('months').add(month); await old.table('transactions').add(t)
+      await old.open(); const {aprMilliPercent, balanceAsOf: _date, interestMethod: _method, ...oldDebt} = d; await old.table('debts').add({ ...oldDebt, aprBasisPoints: aprMilliPercent!/10 }); await old.table('months').add(month); await old.table('transactions').add(t)
       old.close(); await upgraded.open()
       expect(await upgraded.debts.get(d.id)).toEqual(d)
       expect(await upgraded.months.get(month.key)).toEqual({ ...month, openingCents: null })

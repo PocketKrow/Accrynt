@@ -62,7 +62,7 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
           </div>
           <div v-if="!store.loaded" class="loading-state" role="status">Opening local workspace…</div>
           <section v-else-if="store.error" class="error-panel" role="alert"><strong>Local storage unavailable</strong><p>{{ store.error }}</p><p>Use a supported browser with IndexedDB enabled. No data has been sent anywhere.</p><button class="button" @click="store.start()">Retry local storage</button></section>
-          <RouterView v-else />
+          <template v-else><section v-if="store.operationError" class="error-panel" role="alert"><strong>Action could not complete</strong><p>{{ store.operationError }}</p><button class="button small" @click="store.dismissError()">Dismiss error</button></section><RouterView /></template>
         </main>
         <aside id="main-navigation" class="right-rail" tabindex="-1" :class="{ open: sidebarOpen }">
           <BrandMark />
@@ -81,7 +81,7 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
             <div class="rail-row"><span>Planned outflow</span><strong class="mono">{{ formatMoney(store.summary.plannedCents) }}</strong></div>
             <div class="rail-row"><span>Unpaid items</span><strong class="mono">{{ store.summary.unpaidCount }}</strong></div>
           </div>
-          <div class="rail-footer"><span class="dot" /> PRIVATE BY DESIGN <span class="mono">v0.4</span></div>
+          <div class="rail-footer"><span class="dot" /> PRIVATE BY DESIGN <span class="mono">v0.5</span></div>
         </aside>
       </div>
     </div>

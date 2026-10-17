@@ -6,16 +6,20 @@ import { exportBackup, restoreBackup, validateBackup } from '../data/backup'
 import { loadOctoberExample } from '../data/example'
 import { localRepository as repo } from '../data/repository'
 import { monthlySummary } from '../domain/finance'
-import { newId, now, type Backup, type Debt, type Obligation, type Transaction } from '../domain/models'
+import { migrateLegacyDebt, newId, now, type Backup, type Debt, type Obligation, type Transaction } from '../domain/models'
 import { useFinanceStore } from '../stores/finance'
 
 const debt = (): Debt => ({ id: newId(), name: 'Test loan', balanceCents: 10000,
-  startingBalanceCents: 10000, minimumCents: 2000, monthlyPaymentCents: null, aprBasisPoints: 1700, updatedAt: now() })
+  startingBalanceCents: 10000, minimumCents: 2000, monthlyPaymentCents: null, aprMilliPercent: 17000, balanceAsOf: null, interestMethod: 'monthly', updatedAt: now() })
+const legacyDebt = () => {
+  const { aprMilliPercent, balanceAsOf: _asOf, interestMethod: _method, ...rest } = debt()
+  return { ...rest, aprBasisPoints: aprMilliPercent === null ? null : aprMilliPercent / 10 }
+}
 const obligation = (debtId: string | null = null): Obligation => ({ id: newId(), month: '2026-12',
   name: 'Test bill', category: 'Utilities', plannedCents: 2000, dueDay: 31, paidAt: null, debtId, updatedAt: now() })
 const transaction = (obligationId: string | null = null): Transaction => ({ id: newId(), date: '2026-12-31',
   name: 'Test payment', kind: 'expense', category: 'Utilities', amountCents: 1800, account: 'Test checking', obligationId, payment: null, updatedAt: now() })
-const blankBackup = (): Backup => ({ format: 'accrynt-portable', schemaVersion: 3, exportedAt: now(),
+const blankBackup = (): Backup => ({ format: 'accrynt-portable', schemaVersion: 4, workspace: 'personal', balanceEvents: [], exportedAt: now(),
   months: [], obligations: [], transactions: [], debts: [], recurringRules: [], recurringOccurrences: [] })
 
 beforeEach(async () => { await db.open(); await clearWorkspace() })
@@ -138,18 +142,18 @@ describe('portable backup safety', () => {
     await clearWorkspace(); await restoreBackup(JSON.parse(JSON.stringify(first)))
     db.close(); await db.open()
     expect(await readWorkspace()).toEqual({ months: first.months, obligations: first.obligations,
-      transactions: first.transactions, debts: first.debts, recurringRules: first.recurringRules, recurringOccurrences: first.recurringOccurrences })
+      transactions: first.transactions, debts: first.debts, recurringRules: first.recurringRules, recurringOccurrences: first.recurringOccurrences, balanceEvents: first.balanceEvents })
   })
   it.each(['months', 'obligations', 'transactions', 'debts'] as const)('rejects duplicate %s', async table => {
     await seed(); const backup = await exportBackup()
     const invalid = { ...backup, [table]: [backup[table][0], backup[table][0]] }
     await expect(restoreBackup(invalid)).rejects.toThrow('duplicate')
     expect(await readWorkspace()).toEqual({ months: backup.months, obligations: backup.obligations,
-      transactions: backup.transactions, debts: backup.debts, recurringRules: backup.recurringRules, recurringOccurrences: backup.recurringOccurrences })
+      transactions: backup.transactions, debts: backup.debts, recurringRules: backup.recurringRules, recurringOccurrences: backup.recurringOccurrences, balanceEvents: backup.balanceEvents })
   })
   it('rejects invalid payloads and missing relations before clearing anything', async () => {
     await seed(); const before = await readWorkspace()
-    for (const invalid of [null, {}, { ...blankBackup(), schemaVersion: 4 },
+    for (const invalid of [null, {}, { ...blankBackup(), schemaVersion: 99 },
       { ...blankBackup(), obligations: [obligation(newId())] },
       { ...blankBackup(), transactions: [transaction(newId())] },
       { ...blankBackup(), transactions: [{ ...transaction(), date: '2026-02-30' }] }]) {
@@ -182,7 +186,7 @@ describe('debt payment storage and upgrades', () => {
     const d = debt()
     await repo.saveDebt({ ...d, monthlyPaymentCents: 3500 })
     let backup = await exportBackup()
-    expect(backup.schemaVersion).toBe(3)
+    expect(backup.schemaVersion).toBe(4)
     expect(backup.debts[0].monthlyPaymentCents).toBe(3500)
     await repo.saveDebt({ ...backup.debts[0], monthlyPaymentCents: 0 }, backup.debts[0].id)
     backup = await exportBackup()
@@ -190,25 +194,25 @@ describe('debt payment storage and upgrades', () => {
     expect((await db.debts.toArray())[0].monthlyPaymentCents).toBe(0)
   })
   it('restores strict legacy v1 debts with a minimum-payment fallback', async () => {
-    const { monthlyPaymentCents: _payment, ...legacy } = debt()
+    const { monthlyPaymentCents: _payment, ...legacy } = legacyDebt()
     const original = { format: 'accrynt-portable', schemaVersion: 1, exportedAt: now(), months: [], obligations: [], transactions: [], debts: [legacy] }
     await restoreBackup(original)
-    expect((await exportBackup()).debts).toEqual([{ ...legacy, monthlyPaymentCents: null }])
+    expect((await exportBackup()).debts).toEqual([migrateLegacyDebt({ ...legacy, monthlyPaymentCents: null })])
     expect(original.debts[0]).not.toHaveProperty('monthlyPaymentCents')
   })
   it('rejects invalid v2 payments and version-disguised fields without clearing data', async () => {
     await seed(); const before = await readWorkspace()
-    const { monthlyPaymentCents: _payment, ...legacy } = debt()
+    const { monthlyPaymentCents: _payment, ...legacy } = legacyDebt()
     for (const row of [legacy, { ...debt(), monthlyPaymentCents: -1 }, { ...debt(), monthlyPaymentCents: 1.5 }]) {
       await expect(restoreBackup({ ...blankBackup(), debts: [row] })).rejects.toThrow()
     }
-    await expect(restoreBackup({ ...blankBackup(), schemaVersion: 1, debts: [debt()] })).rejects.toThrow()
+    await expect(restoreBackup({ ...blankBackup(), schemaVersion: 1, debts: [legacyDebt()] })).rejects.toThrow()
     expect(await readWorkspace()).toEqual(before)
   })
   it('upgrades an actual v1 IndexedDB in place without changing balances or linked history', async () => {
     const name = `accrynt-migration-test-${newId()}`
     const old = new Dexie(name), upgraded = new AccryntDatabase(name)
-    const { monthlyPaymentCents: _payment, ...legacy } = debt()
+    const { monthlyPaymentCents: _payment, ...legacy } = legacyDebt()
     const o = obligation(legacy.id), t = transaction(o.id)
     const month = { key: '2026-12', incomeCents: 50000, updatedAt: now() }
     try {
@@ -218,7 +222,7 @@ describe('debt payment storage and upgrades', () => {
       await old.table('debts').add(legacy); await old.table('obligations').add(o)
       await old.table('transactions').add(t); await old.table('months').add(month)
       old.close(); await upgraded.open()
-      expect(await upgraded.debts.get(legacy.id)).toEqual({ ...legacy, monthlyPaymentCents: null })
+      expect(await upgraded.debts.get(legacy.id)).toEqual(migrateLegacyDebt({ ...legacy, monthlyPaymentCents: null }))
       expect(await upgraded.obligations.toArray()).toEqual([o])
       expect(await upgraded.transactions.toArray()).toEqual([t])
       expect(await upgraded.months.toArray()).toEqual([{ ...month, openingCents: null }])
