@@ -10,7 +10,7 @@ import { localDate, newId, type Debt, type Obligation } from '../domain/models'
 import { paymentSplit } from '../domain/payment'
 import { useFinanceStore } from '../stores/finance'
 
-const props = defineProps<{ modelValue: boolean; debt?: Debt | null; obligation?: Obligation | null; seed?: { date: string; name: string; amount: string; account: string } | null }>()
+const props = defineProps<{ modelValue: boolean; debt?: Debt | null; obligation?: Obligation | null; seed?: { date: string; name: string; amount: string; account: string; dirty?: boolean } | null }>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 const store = useFinanceStore(), dialog = ref<HTMLDialogElement | null>(null)
 const busy = ref(false), error = ref(''), requestId = ref('')
@@ -102,7 +102,7 @@ async function submit() {
 }
 const draftGuard = useEditorDraft({
   label: 'payment', open: () => props.modelValue, draft: () => ({ form, interestIncludedInBalance: interestIncludedInBalance.value }), busy,
-  save: () => submit(), close: () => { emit('update:modelValue', false) }, element: dialog
+  save: () => submit(), close: () => { emit('update:modelValue', false) }, element: dialog, initialDirty: () => props.seed?.dirty ?? false
 })
 </script>
 <template>

@@ -12,7 +12,7 @@ const props = defineProps<{ modelValue: boolean; record?: Transaction | null; se
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 const store = useFinanceStore()
 const busy = ref(false), error = ref(''), requestId = ref('')
-const connectedOpen = ref(false), connectedSeed = ref<{ date: string; name: string; amount: string; account: string } | null>(null)
+const connectedOpen = ref(false), connectedSeed = ref<{ date: string; name: string; amount: string; account: string; dirty: boolean } | null>(null)
 const form = reactive({ date: '', name: '', kind: 'expense' as TransactionKind, category: 'Other' as Category, amount: '', account: '', obligationId: '', incomeOccurrenceId: '' })
 const relatedObligations = computed(() => store.obligations.filter(item =>
   item.month === transactionMonth(form.date) || item.id === form.obligationId))
@@ -40,7 +40,7 @@ async function chooseType(event: Event) {
   const kind = (event.target as HTMLSelectElement).value
   if (kind !== 'connected') { form.kind = kind as TransactionKind; return }
   // Transfer the current draft to the connected editor; no transaction is written here.
-  connectedSeed.value = { date: form.date, name: form.name, amount: form.amount, account: form.account }
+  connectedSeed.value = { date: form.date, name: form.name, amount: form.amount, account: form.account, dirty: draftGuard.dirty.value }
   draftGuard.reset()
   emit('update:modelValue', false)
   await nextTick()

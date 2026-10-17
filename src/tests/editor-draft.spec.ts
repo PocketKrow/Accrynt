@@ -3,13 +3,13 @@ import { effectScope, nextTick, reactive, ref } from 'vue'
 import { draftPrompt, hasPendingDraft, protectUnload, reviewDrafts, useEditorDraft } from '../composables/editorDraft'
 const scopes: ReturnType<typeof effectScope>[] = []
 afterEach(() => { for (const scope of scopes.splice(0)) scope.stop() })
-async function editor() {
+async function editor(initialDirty = false) {
   const scope = effectScope(); scopes.push(scope)
   const open = ref(true), busy = ref(false), form = reactive({ name: 'initial' })
   const save = vi.fn(async () => { open.value = false })
   let guard!: ReturnType<typeof useEditorDraft>
   scope.run(() => { guard = useEditorDraft({ label: 'synthetic editor', open: () => open.value, busy,
-    draft: () => form, save, close: () => { open.value = false } }) })
+    draft: () => form, save, initialDirty: () => initialDirty, close: () => { open.value = false } }) })
   await nextTick(); await nextTick()
   return { open, busy, form, save, guard }
 }
@@ -44,4 +44,13 @@ it('failed saves retain the draft and stop leaving; in-flight work cannot be dis
   const blocked = reviewDrafts(); expect(draftPrompt.value?.inFlight).toBe(true)
   draftPrompt.value!.resolve('discard'); expect(await blocked).toBe(false)
   expect(e.open.value).toBe(true); expect(e.save).toHaveBeenCalledOnce()
+})
+
+it('protects an unsaved draft transferred from another editor and resets after intentional discard', async () => {
+  const e = await editor(true)
+  expect(e.guard.dirty.value).toBe(true)
+  const leaving = e.guard.close(); draftPrompt.value!.resolve('cancel'); await leaving
+  expect(e.open.value).toBe(true)
+  const discard = e.guard.close(); draftPrompt.value!.resolve('discard'); await discard
+  expect(hasPendingDraft()).toBe(false)
 })

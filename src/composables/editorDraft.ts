@@ -46,13 +46,13 @@ export function reviewDrafts() { return resolveEditors([...editors]) }
 /** One in-memory baseline per editor opening. Never follows live store updates. */
 export function useEditorDraft(options: {
   label: string; open: () => boolean; draft: () => unknown; busy: Ref<boolean>
-  save: () => Promise<void>; close: () => void; element?: Ref<HTMLElement | null>
+  save: () => Promise<void>; close: () => void; element?: Ref<HTMLElement | null>; initialDirty?: () => boolean
 }) {
-  const baseline = ref('')
+  const baseline = ref(''), transferredDirty = ref(false)
   const value = () => JSON.stringify(options.draft())
-  const dirty = computed(() => options.open() && baseline.value !== value())
-  const reset = () => { baseline.value = value() }
-  watch(options.open, async open => { if (open) { await nextTick(); reset() } }, { immediate: true, flush: 'post' })
+  const dirty = computed(() => options.open() && (transferredDirty.value || baseline.value !== value()))
+  const reset = () => { baseline.value = value(); transferredDirty.value = false }
+  watch(options.open, async open => { if (open) { await nextTick(); reset(); transferredDirty.value = options.initialDirty?.() ?? false } }, { immediate: true, flush: 'post' })
   const editor: Editor = {
     label: options.label, active: options.open, dirty: () => dirty.value, busy: () => options.busy.value,
     save: options.save, discard: () => { reset(); options.close() },

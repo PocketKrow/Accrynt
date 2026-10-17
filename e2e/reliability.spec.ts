@@ -214,3 +214,22 @@ test('file input checks the 64 MB boundary in UTF-8 bytes before replacement', a
   page.once('dialog', d => d.accept()); await prepare(64_000_000)
   await expect(page.getByText('Validated backup:', { exact: false })).toBeVisible()
 })
+
+
+test('switching a typed transaction to connected payment retains its unsaved-draft protection', async ({ page }) => {
+  await fixed(page); await page.goto('/#/ledger')
+  await page.getByRole('button', { name: '+ Record transaction' }).click()
+  const transaction = page.getByRole('dialog', { name: 'Transaction', exact: true })
+  await transaction.getByLabel('Description', { exact: true }).fill('Transferred unsaved draft')
+  await transaction.getByLabel('Amount (USD)', { exact: true }).fill('50')
+  await transaction.getByRole('combobox', { name: 'Type', exact: true }).selectOption('connected')
+  const payment = page.getByRole('dialog', { name: 'Record payment', exact: true })
+  await payment.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await page.getByRole('button', { name: 'Keep editing', exact: true }).click()
+  await expect(payment.getByLabel('Description', { exact: true })).toHaveValue('Transferred unsaved draft')
+  await expect(payment.getByLabel('Payment amount (USD)')).toHaveValue('50')
+  await payment.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await page.getByRole('button', { name: 'Discard changes', exact: true }).click()
+  await expect(payment).not.toBeVisible()
+  await expect(page.getByRole('row').filter({ hasText: 'Transferred unsaved draft' })).toHaveCount(0)
+})

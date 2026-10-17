@@ -30,19 +30,20 @@ Skipped occurrences have no historical category/debt fields in native v4/portabl
 
 Baseline on fresh main: `npm ci`, `npm run typecheck`, `npm test` (142 passing), `npm run build` succeeded.
 
-Implementation commit: `e60ba7a54c112ae50bacc327068283fe2a69ccb9`. The GitHub connection created this commit with tree `909869a58bebd8c06dd3d04e79b312145cab2c47`; fetching it confirmed exact equality with the locally tested implementation tree (only commit metadata differed). Typecheck, unit tests and build were also repeated after checking out that remote implementation commit. The first delivery commit adds documentation/screenshots only. A subsequent test-only follow-up waits for completion of the large restore, as described below; application behavior is unchanged.
+Implementation commit: `e60ba7a54c112ae50bacc327068283fe2a69ccb9`. The GitHub connection created this commit with tree `909869a58bebd8c06dd3d04e79b312145cab2c47`; fetching it confirmed exact equality with the locally tested implementation tree (only commit metadata differed). Typecheck, unit tests and build were also repeated after checking out that remote implementation commit. The first delivery commit adds documentation/screenshots only. A test-only follow-up waits for completion of the large restore. A further focused fix preserves dirty state when user-typed transaction fields are transferred to connected payment; ordinary clean prefilled forms remain clean. Exact subsequent head SHAs and final browser-run results are recorded in the PR.
 
 | Check | Final result |
 | --- | --- |
 | `npm run typecheck` | Passed |
-| `npm test` | **159 passed**, 14 files |
+| `npm test` | **160 passed**, 14 files |
 | `npm run build` | Passed; 23 offline precache entries, 688.01 KiB |
-| Full Playwright suite below | **105 passed**, no retries: Chromium 51, Firefox 51, WebKit smoke 1, timezone projects 2 |
+| Original complete Playwright pass | **105 passed**, no retries: Chromium 51, Firefox 51, WebKit smoke 1, timezone projects 2 |
+| Typed-draft transfer follow-up | New regression **2/2 passed** locally (Chromium/Firefox), plus a new shared-guard unit test; current full suite has 107 cases, final result in PR |
 | Focused Firefox 320px schedule after passive-toast fix | **3/3 passed** |
 | Render capture | 14 screenshots, no page errors or document overflow |
 | `git diff --check` | Passed |
 
-A prior full run found the passive-toast pointer interception in Firefox. The trace was inspected, the cause fixed, and the complete suite rerun to 105 passing. No unsuccessful run is presented as a pass. The first remote CI run (39069206872) passed 104 cases but failed the large Firefox restore assertion on both attempts. Its trace showed disabled controls with the restore still busy and no storage error at the five-second assertion deadline. That synthetic 24,000-row test now waits up to 30 seconds for the operation to settle, then checks success and compares the actual downloaded/restored transactions. Other assertions/timeouts and application resource limits are unchanged. The follow-up CI result is recorded in the PR. Node is 24.19.0. The package still supports `^22.12.0 || >=24.0.0`; Node 22 was not run locally.
+A prior full run found the passive-toast pointer interception in Firefox. The trace was inspected, the cause fixed, and the complete suite rerun to 105 passing. No unsuccessful run is presented as a pass. The first remote CI run (39069206872) passed 104 cases but failed the large Firefox restore assertion on both attempts. Its trace showed disabled controls with the restore still busy and no storage error at the five-second assertion deadline. That synthetic 24,000-row test now waits up to 30 seconds for the operation to settle, then checks success and compares the actual downloaded/restored transactions. Other assertions/timeouts and application resource limits are unchanged. The typed-draft transfer follow-up adds explicit initial dirty-state inheritance to the shared guard and a regression that cancels/reviews/discards a transferred draft without writing money. Both changed browser workflows passed focused local runs. The follow-up CI result is recorded in the PR. Node is 24.19.0. The package still supports `^22.12.0 || >=24.0.0`; Node 22 was not run locally.
 
 ```bash
 npm run typecheck
