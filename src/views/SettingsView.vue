@@ -127,10 +127,18 @@ async function clearAll() {
 <template>
   <PageHeader label="06 / PREFERENCES" title="Settings" subtitle="Your data stays in this browser profile until you export it or move it yourself." />
   <div class="settings-grid">
+    <div class="settings-column">
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">APPEARANCE</span><h2>Interface</h2></div></div>
       <div class="setting-row"><div><strong>Color theme</strong><p>Carbon × Glacier, with an off-gray light mode and graphite dark mode.</p></div><select :value="store.theme" aria-label="Theme" @change="store.setTheme(($event.target as HTMLSelectElement).value as 'light' | 'dark')"><option value="light">Light</option><option value="dark">Dark</option></select></div>
       <div class="setting-row"><div><strong>Storage engine</strong><p>IndexedDB via Dexie. No account, server, banking connection, or cloud sync.</p></div><span class="status-pill">LOCAL</span></div>
     </section>
+    <section class="panel"><div class="panel-heading"><div><span class="eyebrow">BROWSER STORAGE</span><h2>Data location</h2></div></div>
+      <p class="body-copy">Records are stored in your browser's IndexedDB database <code>{{ databaseName }}</code>, tied to this website's origin and browser profile. Clearing site data or changing devices will not preserve them automatically.</p>
+      <div class="setting-row"><div><strong>Storage estimate</strong><p>{{ storageEstimate }}</p></div><button class="button small" @click="storageInfo">Check</button></div>
+      <div class="setting-row"><div><strong>Persistent storage</strong><p>{{ requestingPersistence ? 'Waiting for your browser’s permission decision' : persisted === true ? 'Granted' : persisted === false ? 'Not granted' : 'Not checked' }}. A request may be declined by the browser.</p></div><button class="button small" :disabled="requestingPersistence" @click="requestPersistence">{{ requestingPersistence ? 'Waiting…' : 'Request' }}</button></div>
+    </section>
+    </div>
+    <div class="settings-column">
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">YOUR RECORDS</span><h2>Backup & restore</h2></div></div>
       <p class="body-copy">Export a portable v5 JSON archive. This version requires the updated app; older app versions cannot read v5 exports. Imports from v1–v4 remain supported. Save it somewhere outside this browser. Restore replaces all records only after validation and explicit confirmation.</p>
       <div class="data-counts"><span>{{ rowCounts.months }} months</span><span>{{ rowCounts.obligations }} obligations</span><span>{{ rowCounts.transactions }} transactions</span><span>{{ rowCounts.debts }} debts</span><span>{{ rowCounts.recurringRules }} recurring rules</span><span>{{ rowCounts.recurringOccurrences }} recurring entries</span></div>
@@ -145,11 +153,6 @@ async function clearAll() {
       <p v-if="importError" class="error-message" role="alert">{{ importError }}</p>
       <button v-if="readyBackup" class="button danger-button" :disabled="busy" @click="restore">Replace local records with backup</button>
     </section>
-    <section class="panel"><div class="panel-heading"><div><span class="eyebrow">BROWSER STORAGE</span><h2>Data location</h2></div></div>
-      <p class="body-copy">Records are stored in your browser's IndexedDB database <code>{{ databaseName }}</code>, tied to this website's origin and browser profile. Clearing site data or changing devices will not preserve them automatically.</p>
-      <div class="setting-row"><div><strong>Storage estimate</strong><p>{{ storageEstimate }}</p></div><button class="button small" @click="storageInfo">Check</button></div>
-      <div class="setting-row"><div><strong>Persistent storage</strong><p>{{ requestingPersistence ? 'Waiting for your browser’s permission decision' : persisted === true ? 'Granted' : persisted === false ? 'Not granted' : 'Not checked' }}. A request may be declined by the browser.</p></div><button class="button small" :disabled="requestingPersistence" @click="requestPersistence">{{ requestingPersistence ? 'Waiting…' : 'Request' }}</button></div>
-    </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">WORKSPACE TOOLS</span><h2>Local controls</h2></div></div>
       <p v-if="isDemo" class="body-copy">This synthetic workspace uses the same local workflows. Use Reset demo above to reload a scenario or Return to my workspace to leave the sandbox.</p><p v-else class="body-copy">Use Try demo for a fully interactive synthetic workspace. The small selected-month example adds fictional bills. It can only be added to an entirely empty workspace and never loads automatically.</p>
       <a v-if="!isDemo" class="button" :href="workspaceUrl(true)">Try demo</a>
@@ -159,6 +162,7 @@ async function clearAll() {
       <p class="body-copy">A current downloadable safety snapshot is prepared before deletion. Permanent deletion affects only the current browser's Accrynt database; existing downloaded backups are unaffected.</p>
       <button class="button danger-button" :disabled="busy || !store.hasAnyData" @click="clearAll">Delete all local records</button>
     </section>
+    </div>
   </div>
   <p v-if="error" class="error-message" role="alert">{{ error }}</p>
 </template>

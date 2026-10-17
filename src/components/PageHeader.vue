@@ -9,16 +9,18 @@ const headingId = computed(() => props.title.toLowerCase().replace(/\W+/g, '-'))
 </script>
 <template>
   <header class="page-header">
-    <div>
+    <div class="page-heading">
       <p class="eyebrow">{{ label }}</p>
       <h1 :id="headingId">{{ title }}</h1>
       <p v-if="subtitle" class="page-subtitle">{{ subtitle }}</p>
     </div>
-    <div v-if="monthNavigation" class="month-nav" role="group" aria-label="Select month">
-      <button type="button" aria-label="Previous month" :disabled="store.month === '0001-01'" @click="store.month = shiftMonth(store.month, -1)">‹</button>
-      <span>{{ monthLabel }}</span>
-      <button type="button" aria-label="Next month" :disabled="store.month === '9999-12'" @click="store.month = shiftMonth(store.month, 1)">›</button>
+    <div v-if="monthNavigation || $slots.actions" class="page-tools">
+      <div v-if="monthNavigation" class="month-nav" role="group" aria-label="Select month">
+        <button type="button" aria-label="Previous month" :disabled="store.month === '0001-01'" @click="store.month = shiftMonth(store.month, -1)">‹</button>
+        <span>{{ monthLabel }}</span>
+        <button type="button" aria-label="Next month" :disabled="store.month === '9999-12'" @click="store.month = shiftMonth(store.month, 1)">›</button>
+      </div>
+      <div v-if="$slots.actions" class="page-actions"><slot name="actions" /></div>
     </div>
-    <slot name="actions" />
   </header>
 </template>

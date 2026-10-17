@@ -8,7 +8,7 @@ import RecurringPanel from '../components/RecurringPanel.vue'
 import CopyMonthForm from '../components/CopyMonthForm.vue'
 import { useFinanceStore } from '../stores/finance'
 import { localRepository } from '../data/repository'
-import { formatMoney, parseMoney, obligationPayment, dueDate } from '../domain/finance'
+import { formatMoney, parseMoney, dueDate } from '../domain/finance'
 import type { Obligation } from '../domain/models'
 const store = useFinanceStore()
 const editorOpen = ref(false)
@@ -16,10 +16,21 @@ const editing = ref<Obligation | null>(null)
 const paymentOpen = ref(false), paying = ref<Obligation | null>(null)
 const recurringPanel = ref<InstanceType<typeof RecurringPanel> | null>(null)
 const copyOpen = ref(false), copyTarget = ref(store.month)
-const isRecurring = (row: Obligation) => store.recurringOccurrences.some(r => r.obligationId === row.id)
-const state = (row: Obligation) => obligationPayment(row, store.transactions, store.today)
-const canCopy = computed(() => store.month !== '0001-01' && store.monthObligations.every(o => store.recurringOccurrences.some(r => r.obligationId === o.id)))
-const crossMonthDates = (row: Obligation) => [...new Set(store.transactions.filter(t => t.obligationId === row.id && t.kind !== 'income' && t.date <= store.today && !t.date.startsWith(row.month)).map(t => t.date))].sort().join(', ')
+const recurringBillIds = computed(() => new Set(store.recurringOccurrences.map(r => r.obligationId)))
+const isRecurring = (row: Obligation) => recurringBillIds.value.has(row.id)
+const state = (row: Obligation) => store.obligationState(row)
+const canCopy = computed(() => store.month !== '0001-01' && store.monthObligations.every(isRecurring))
+const linkedDates = computed(() => {
+  const result = new Map<string, Set<string>>()
+  for (const transaction of store.transactions) {
+    if (!transaction.obligationId || transaction.kind === 'income' || transaction.date > store.today) continue
+    const dates = result.get(transaction.obligationId)
+    if (dates) dates.add(transaction.date)
+    else result.set(transaction.obligationId, new Set([transaction.date]))
+  }
+  return result
+})
+const crossMonthDates = (row: Obligation) => [...(linkedDates.value.get(row.id) ?? [])].filter(date => !date.startsWith(row.month)).sort().join(', ')
 function pay(row: Obligation) { paying.value = row; paymentOpen.value = true }
 const query = ref('')
 const filter = ref<'all' | 'paid' | 'unpaid'>('all')
@@ -65,8 +76,8 @@ function copyPrevious() { copyTarget.value = store.month; copyOpen.value = true 
   <section class="panel">
     <div class="panel-heading"><div><span class="eyebrow">OBLIGATION REGISTER</span><h2>Planned payments</h2></div><button v-if="canCopy" class="button small" @click="copyPrevious">Copy previous month</button></div>
     <div class="table-controls"><input v-model="query" aria-label="Search obligations" placeholder="Search obligations…" /><select v-model="filter" aria-label="Filter payment status"><option value="all">All statuses</option><option value="paid">Paid</option><option value="unpaid">Unpaid</option></select></div>
-    <div class="table-scroll"><table class="data-table"><thead><tr><th>Status</th><th>Obligation</th><th>Category</th><th>Due</th><th class="number">Amount</th><th>Actions</th></tr></thead><tbody>
-      <tr v-for="record in rows" :key="record.id"><td><label class="checkbox-label"><input type="checkbox" :checked="state(record).paid" :disabled="state(record).paid && !record.paidAt" :aria-label="`Mark ${record.name} paid`" @change="toggle(record)"/><span><span>{{ state(record).status }}</span><small v-if="record.paidAt" class="cell-sub">Marked paid manually · no transaction added</small></span></label></td><td class="weight-medium">{{ record.name }}<small v-if="state(record).recordedCents" class="cell-sub">{{ formatMoney(state(record).recordedCents) }} recorded · {{ formatMoney(state(record).remainingCents) }} remaining</small><small v-if="crossMonthDates(record)" class="cell-sub">Includes payments dated {{ crossMonthDates(record) }} · cash belongs to those months</small></td><td>{{ record.category }}</td><td>{{ record.dueDay ? dueDate(record.month, record.dueDay) : '—' }}</td><td class="number mono">{{ formatMoney(record.plannedCents) }}</td><td><div class="row-actions"><button v-if="!state(record).paid" class="button small" :aria-label="`Record payment ${record.name}`" @click="pay(record)">Record payment</button><button class="text-link" :aria-label="`Edit ${record.name}`" @click="openForm(record)">Edit</button><button v-if="!isRecurring(record)" class="text-link" @click="recurringPanel?.repeatBill(record)">Repeat monthly</button><button class="text-link danger-link" :aria-label="`Delete ${record.name}`" @click="remove(record)">Delete</button></div></td></tr>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Planned payments table"><table class="data-table plan-table"><caption class="sr-only">Planned payments for {{ store.month }}</caption><thead><tr><th>Status</th><th>Obligation</th><th>Category</th><th>Due</th><th class="number">Amount</th><th>Actions</th></tr></thead><tbody>
+      <tr v-for="record in rows" :key="record.id"><td><label class="checkbox-label"><input type="checkbox" :checked="state(record).paid" :disabled="state(record).paid && !record.paidAt" :aria-label="`Mark ${record.name} paid`" @change="toggle(record)"/><span><span>{{ state(record).status }}</span></span></label></td><td class="description-cell"><strong>{{ record.name }}</strong><button v-if="!isRecurring(record)" class="text-link repeat-action" @click="recurringPanel?.repeatBill(record)">Repeat monthly</button><small v-if="record.paidAt" class="cell-sub">Marked paid manually · no transaction added</small><small v-if="state(record).recordedCents" class="cell-sub">{{ formatMoney(state(record).recordedCents) }} recorded · {{ formatMoney(state(record).remainingCents) }} remaining</small><small v-if="crossMonthDates(record)" class="cell-sub">Includes payments dated {{ crossMonthDates(record) }} · cash belongs to those months</small></td><td>{{ record.category }}</td><td>{{ record.dueDay ? dueDate(record.month, record.dueDay) : '—' }}</td><td class="number mono">{{ formatMoney(record.plannedCents) }}</td><td class="action-cell"><div class="row-actions plan-actions"><span class="payment-slot"><button v-if="!state(record).paid" class="button small" :aria-label="`Record payment ${record.name}`" @click="pay(record)">Record payment</button></span><button class="text-link" :aria-label="`Edit ${record.name}`" @click="openForm(record)">Edit</button><button class="text-link danger-link" :aria-label="`Delete ${record.name}`" @click="remove(record)">Delete</button></div></td></tr>
       <tr v-if="!rows.length"><td colspan="6" class="empty-cell">No matching obligations. Add one to start your monthly plan.</td></tr>
     </tbody></table></div>
     <p class="fine-print">Record payment adds actual outflow once and updates payment status. The checkbox is a manual confirmation for entries tracked elsewhere; it does not record outflow. Payments recorded in the Ledger cannot be unchecked here.</p>

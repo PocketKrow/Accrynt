@@ -1,0 +1,12 @@
+/* Only shipped weights are precached; both families remain available offline. */
+@each $family, $file in ('Inter': 'inter', 'JetBrains Mono': 'jetbrains-mono') {
+  @each $weight in (400, 500, 600, 700) {
+    @font-face {
+      font-family: $family;
+      font-style: normal;
+      font-weight: $weight;
+      font-display: swap;
+      src: url('/fonts/#{$file}-latin-#{$weight}-normal.woff2') format('woff2');
+    }
+  }
+}
