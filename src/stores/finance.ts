@@ -6,7 +6,7 @@ import { db, readWorkspace } from '../data/database'
 import { seedDemo } from '../data/demo'
 import { isDemo } from '../data/workspace'
 import { currentMonth, localDate, type MonthPlan, type Obligation, type Transaction, type Debt, type RecurringRule, type RecurringOccurrence, type BalanceEvent } from '../domain/models'
-import { availableMoney, monthlySummary, sum } from '../domain/finance'
+import { availableMoney, buildObligationPayments, monthlySummary, obligationPayment, sum } from '../domain/finance'
 import { localRepository } from '../data/repository'
 
 const PREF_THEME = isDemo ? 'accrynt-demo-theme-v1' : 'accrynt-theme-v1'
@@ -41,8 +41,10 @@ export const useFinanceStore = defineStore('finance', () => {
     .slice().sort(compareTransactions))
   const expectedOccurrences = computed(() => recurringOccurrences.value.filter(o => o.month === month.value && o.kind === 'income'))
   const expectedIncomeCents = computed(() => (monthData.value?.incomeCents ?? 0) + sum(expectedOccurrences.value.filter(o => !o.cancelled).map(o => o.amountCents)))
-  const summary = computed(() => monthlySummary(month.value, expectedIncomeCents.value, obligations.value, transactions.value, today.value))
-  const cashflow = computed(() => availableMoney(month.value, monthData.value?.openingCents ?? null, obligations.value, transactions.value, today.value))
+  const paymentStates = computed(() => buildObligationPayments(obligations.value, transactions.value, today.value))
+  const obligationState = (row: Obligation) => paymentStates.value.get(row.id) ?? obligationPayment(row, transactions.value, today.value)
+  const summary = computed(() => monthlySummary(month.value, expectedIncomeCents.value, obligations.value, transactions.value, today.value, paymentStates.value))
+  const cashflow = computed(() => availableMoney(month.value, monthData.value?.openingCents ?? null, obligations.value, transactions.value, today.value, paymentStates.value))
   const hasAnyData = computed(() => months.value.length + obligations.value.length + transactions.value.length + debts.value.length + recurringRules.value.length + balanceEvents.value.length > 0)
   let generating = false, requested = false
   let initialization: Promise<void> | null = null
@@ -115,7 +117,7 @@ export const useFinanceStore = defineStore('finance', () => {
   function clearNotice() { notice.value = '' }
   return {
     months, obligations, transactions, debts, balanceEvents, recurringRules, recurringOccurrences, month, today, theme, loaded, error, notice, operationError, fail, dismissError,
-    monthData, monthObligations, monthTransactions, expectedOccurrences, expectedIncomeCents, summary, cashflow, hasAnyData,
+    monthData, monthObligations, monthTransactions, expectedOccurrences, expectedIncomeCents, summary, cashflow, hasAnyData, obligationState,
     recurrenceWarning, planIncomplete, retryRecurrence: () => generateMonth(true), start, stop, setTheme, notify, clearNotice
   }
 })

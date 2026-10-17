@@ -1,9 +1,11 @@
 import type { Obligation, Transaction, Debt } from './models'
 import { localDate, monthKeySchema, transactionMonth } from './models'
 
-export const formatMoney = (cents: number) => new Intl.NumberFormat('en-US', {
+const moneyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD'
-}).format(cents / 100)
+})
+const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+export const formatMoney = (cents: number) => moneyFormatter.format(cents / 100)
 
 export function parseMoney(value: string): number | null {
   const input = value.trim()
@@ -27,6 +29,18 @@ export function obligationPayment(obligation: Obligation, transactions: Transact
   const scheduledCents = sum(transactions.filter(t => t.obligationId === obligation.id && t.kind !== 'income' && t.date > through).map(t => t.amountCents))
   return { recordedCents, scheduledCents, remainingCents, paid, status: paid ? 'Paid' : recordedCents > 0 ? 'Partial' : scheduledCents > 0 ? 'Scheduled' : 'Unpaid' }
 }
+export type ObligationPayments = ReadonlyMap<string, ReturnType<typeof obligationPayment>>
+/** Build once for a live snapshot; each bill only scans its own linked entries. */
+export function buildObligationPayments(obligations: Obligation[], transactions: Transaction[], through = localDate()): ObligationPayments {
+  const linked = new Map<string, Transaction[]>()
+  for (const transaction of transactions) {
+    if (!transaction.obligationId || transaction.kind === 'income') continue
+    const entries = linked.get(transaction.obligationId)
+    if (entries) entries.push(transaction)
+    else linked.set(transaction.obligationId, [transaction])
+  }
+  return new Map(obligations.map(row => [row.id, obligationPayment(row, linked.get(row.id) ?? [], through)]))
+}
 export function dueDate(month: string, day: number): string {
   monthKeySchema.parse(month)
   if (!Number.isInteger(day) || day < 1 || day > 31) throw new Error('Invalid day.')
@@ -34,20 +48,23 @@ export function dueDate(month: string, day: number): string {
   last.setUTCFullYear(year, number, 0)
   return `${month}-${String(Math.min(day, last.getUTCDate())).padStart(2, '0')}`
 }
-export function availableMoney(month: string, openingCents: number | null, obligations: Obligation[], transactions: Transaction[], today: string) {
+export function availableMoney(month: string, openingCents: number | null, obligations: Obligation[], transactions: Transaction[], today: string, payments?: ObligationPayments) {
   const actual = transactions.filter(t => transactionMonth(t.date) === month && t.date <= today)
   const receivedCents = sum(actual.filter(t => t.kind === 'income').map(t => t.amountCents))
   const spentCents = sum(actual.filter(t => t.kind !== 'income').map(t => t.amountCents))
-  const outstandingCents = sum(obligations.filter(o => o.month === month).map(o => obligationPayment(o, transactions, today).remainingCents))
+  const planned = obligations.filter(o => o.month === month)
+  const states = payments ?? buildObligationPayments(planned, transactions, today)
+  const outstandingCents = sum(planned.map(o => (states.get(o.id) ?? obligationPayment(o, transactions, today)).remainingCents))
   const trackedCents = openingCents === null ? null : openingCents + receivedCents - spentCents
   return { receivedCents, spentCents, outstandingCents, trackedCents,
     afterBillsCents: trackedCents === null ? null : trackedCents - outstandingCents }
 }
-export function monthlySummary(month: string, incomeCents: number, obligations: Obligation[], transactions: Transaction[], through = localDate()) {
+export function monthlySummary(month: string, incomeCents: number, obligations: Obligation[], transactions: Transaction[], through = localDate(), payments?: ObligationPayments) {
   const planned = obligations.filter(o => o.month === month)
   const actual = transactions.filter(t => transactionMonth(t.date) === month && t.date <= through)
   const plannedCents = sum(planned.map(o => o.plannedCents))
-  const paidCount = planned.filter(o => obligationPayment(o, transactions, through).paid).length
+  const states = payments ?? buildObligationPayments(planned, transactions, through)
+  const paidCount = planned.filter(o => (states.get(o.id) ?? obligationPayment(o, transactions, through)).paid).length
   const actualIncomeCents = sum(actual.filter(t => t.kind === 'income').map(t => t.amountCents))
   const actualOutflowCents = sum(actual.filter(t => t.kind !== 'income').map(t => t.amountCents))
   return {
@@ -83,8 +100,7 @@ export function longMonth(key: string) {
   const [year, month] = key.split('-').map(Number)
   const date = new Date(0)
   date.setUTCFullYear(year, month - 1, 1)
-  return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-    .format(date)
+  return monthFormatter.format(date)
 }
 
 /** Plan amount stays fixed; receipt status follows linked actual and future-dated deposits. */

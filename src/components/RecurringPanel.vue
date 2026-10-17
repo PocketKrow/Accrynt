@@ -13,7 +13,17 @@ const open = ref(false), busy = ref(false), error = ref('')
 const editing = ref<RecurringRule | null>(null), occurrence = ref<RecurringOccurrence | null>(null)
 const sourceBill = ref<Obligation | null>(null)
 const receiptOpen = ref(false), receiptSeed = ref<{ name: string; amountCents: number; kind: 'income'; incomeOccurrenceId: string } | null>(null)
-const receipt = (entry: RecurringOccurrence) => incomeReceipt(entry, store.transactions, store.today)
+const receipts = computed(() => {
+  const linked = new Map<string, typeof store.transactions>()
+  for (const transaction of store.transactions) {
+    if (transaction.kind !== 'income' || !transaction.incomeOccurrenceId) continue
+    const entries = linked.get(transaction.incomeOccurrenceId)
+    if (entries) entries.push(transaction)
+    else linked.set(transaction.incomeOccurrenceId, [transaction])
+  }
+  return new Map(store.expectedOccurrences.map(entry => [entry.id, incomeReceipt(entry, linked.get(entry.id) ?? [], store.today)]))
+})
+const receipt = (entry: RecurringOccurrence) => receipts.value.get(entry.id) ?? incomeReceipt(entry, store.transactions, store.today)
 const activeCount = computed(() => store.recurringRules.filter(r => r.enabled).length)
 const form = reactive({ name: '', kind: 'bill' as 'bill' | 'income', amount: '', category: 'Utilities' as Category,
   day: '', debtId: '', start: '', end: '', enabled: true })

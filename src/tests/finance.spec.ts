@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { debtProgress, monthlySummary, parseMoney, shiftMonth } from '../domain/finance'
+import { availableMoney, buildObligationPayments, debtProgress, formatMoney, monthlySummary, obligationPayment, parseMoney, shiftMonth } from '../domain/finance'
 import { monthKeySchema, transactionSchema } from '../domain/models'
 import type { Obligation, Transaction, Debt } from '../domain/models'
 
@@ -43,6 +43,34 @@ describe('dates and debt progress', () => {
     const debt: Debt = { id: crypto.randomUUID(), name: 'Loan', balanceCents: 50000, startingBalanceCents: null, minimumCents: 3000, monthlyPaymentCents: null, aprMilliPercent: null, balanceAsOf: null, interestMethod: 'monthly', updatedAt: new Date().toISOString() }
     expect(debtProgress(debt)).toBeNull()
     expect(debtProgress({ ...debt, startingBalanceCents: 100000 })).toBe(50)
+  })
+})
+
+describe('snapshot payment calculations', () => {
+  it('preserves manual, zero, cross-month, future and income-link semantics', () => {
+    const rows = [obligation({ id:'partial', plannedCents:10000 }), obligation({ id:'manual',paidAt:'2026-10-01T00:00:00Z' }), obligation({ id:'zero',plannedCents:0 })]
+    const entries = [transaction({obligationId:'partial',date:'2026-09-30',amountCents:3000}),transaction({obligationId:'partial',date:'2026-10-16',amountCents:2000}),transaction({obligationId:'partial',date:'2026-10-17',amountCents:5000}),transaction({obligationId:'partial',kind:'income',amountCents:99999})]
+    const index = buildObligationPayments(rows,entries,'2026-10-16')
+    expect(index.get('partial')).toMatchObject({recordedCents:5000,scheduledCents:5000,remainingCents:5000,paid:false,status:'Partial'})
+    expect(index.get('manual')).toMatchObject({recordedCents:0,remainingCents:0,paid:true})
+    expect(index.get('zero')).toMatchObject({remainingCents:0,paid:true})
+    for (const row of rows) expect(index.get(row.id)).toEqual(obligationPayment(row,entries,'2026-10-16'))
+    const later = buildObligationPayments(rows,entries,'2026-10-17')
+    expect(later.get('partial')).toMatchObject({recordedCents:10000,scheduledCents:0,remainingCents:0,paid:true})
+    expect(index.get('partial')?.paid).toBe(false) // snapshots do not mutate one another
+    expect(availableMoney('2026-10',null,rows,entries,'2026-10-16',index).trackedCents).toBeNull()
+  })
+  it('retains the exact aggregate results on a 2,000-bill / 20,000-entry fixture', () => {
+    const rows = Array.from({length:2000},(_,i)=>obligation({id:`bill-${i}`,plannedCents:10000,paidAt:i%17===0?'2026-10-16T16:00:00Z':null}))
+    const entries = Array.from({length:20000},(_,i)=>transaction({id:`tx-${i}`,date:i%5===0?'2026-10-25':i%7===0?'2026-09-30':'2026-10-15',kind:i%11===0?'income':'expense',amountCents:1000,obligationId:`bill-${i%2000}`}))
+    const index = buildObligationPayments(rows,entries,'2026-10-16')
+    expect(monthlySummary('2026-10',30000000,rows,entries,'2026-10-16',index)).toMatchObject({paidCount:254,actualOutflowCents:12467000})
+    expect(availableMoney('2026-10',10000,rows,entries,'2026-10-16',index)).toMatchObject({trackedCents:-11210000,outstandingCents:5130000})
+    expect(monthlySummary('2026-10',30000000,rows,entries,'2026-10-16')).toEqual(monthlySummary('2026-10',30000000,rows,entries,'2026-10-16',index))
+    for (const i of [0,1,5,11,17,29,111,1999]) expect(index.get(rows[i].id)).toEqual(obligationPayment(rows[i],entries,'2026-10-16'))
+  })
+  it('retains signed cents and grouping when reusing the currency formatter', () => {
+    expect([0,1,-1,123456,99999999999].map(formatMoney)).toEqual(['$0.00','$0.01','-$0.01','$1,234.56','$999,999,999.99'])
   })
 })
 
