@@ -82,6 +82,7 @@ test('two tabs reject stale monthly drafts without refreshing baselines; indepen
   for (const tab of [page, other]) { await tab.getByRole('button', { name: 'Edit additional income ↗' }).click() }
   await page.locator('.inline-editor input').fill('500'); await other.locator('.inline-editor input').fill('600')
   await page.locator('.inline-editor').getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.locator('.inline-editor')).not.toBeVisible()
   await expect(other.locator('.metric-card').filter({ hasText: 'Expected income' })).toContainText('$500.00')
   await other.locator('.inline-editor').getByRole('button', { name: 'Save', exact: true }).click()
   await expect(other.getByRole('alert')).toContainText('Your draft is kept')
@@ -97,6 +98,7 @@ test('two tabs reject stale monthly drafts without refreshing baselines; indepen
   await page.getByRole('button', { name: 'Edit additional income ↗' }).click(); await page.locator('.inline-editor input').fill('700')
   await page.locator('.inline-editor').getByRole('button', { name: 'Save', exact: true }).click()
   await other.getByRole('button', { name: 'Save opening balance', exact: true }).click()
+  await expect(other.locator('.inline-editor')).not.toBeVisible()
   await other.getByRole('link', { name: /Settings/ }).click()
   const data = JSON.parse((await download(other)).toString('utf8'))
   expect(data.months[0]).toMatchObject({ incomeCents: 70000, openingCents: -2500 })

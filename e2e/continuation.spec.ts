@@ -22,7 +22,6 @@ test('explicit partial receipts preserve plan income, support future edits/unlin
     await transaction.getByLabel('Description', { exact: true }).fill(name)
     await transaction.getByLabel('Amount (USD)', { exact: true }).fill(amount)
     await transaction.getByRole('button', { name: 'Save transaction' }).click()
-  await expect(transaction).not.toBeVisible()
     await expect(transaction).not.toBeVisible()
   }
   await expect(scheduled).toContainText('$500.00 received'); await expect(expected).toContainText('$500.00')
@@ -64,6 +63,7 @@ test('recurrence failure leaves live writes working, warns about incomplete tota
   await dialog.getByLabel('Description', { exact: true }).fill('Synthetic live write')
   await dialog.getByLabel('Amount (USD)', { exact: true }).fill('25')
   await dialog.getByRole('button', { name: 'Save transaction' }).click()
+  await expect(dialog).not.toBeVisible()
   await expect(page.getByRole('row').filter({ hasText: 'Synthetic live write' })).toBeVisible()
   expect(await page.evaluate(() => (window as unknown as { failedAttempts: number }).failedAttempts)).toBe(1)
   await page.evaluate(() => { (window as unknown as { failRecurrence: boolean }).failRecurrence = false })
@@ -127,6 +127,7 @@ test('prior-month posted interest is suggested once and the retained-date editor
   await expect(editor.getByText('The balance changed while its reference date stays', {exact:false})).toBeVisible()
   await editor.getByLabel('Balance as of date (optional)').fill('2026-09-01')
   await editor.getByRole('button',{name:'Save debt'}).click()
+  await expect(editor).not.toBeVisible()
   await card.getByRole('button',{name:'Adjust balance',exact:true}).click()
   const adjustment = page.getByRole('dialog',{name:'Adjust debt balance'})
   await adjustment.getByLabel('Adjustment type').selectOption('interest')
