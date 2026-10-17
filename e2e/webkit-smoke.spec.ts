@@ -1,0 +1,22 @@
+import { expect, test } from '@playwright/test'
+import { Buffer } from 'node:buffer'
+test('core local storage, forms, navigation, backup and restore smoke', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
+  await page.goto('/#/plan'); await page.getByRole('button', { name: '+ Add obligation' }).click()
+  const form = page.getByRole('dialog', { name: 'Add obligation', exact: true })
+  await form.getByLabel('Obligation name').fill('Synthetic WebKit bill')
+  await form.getByLabel('Planned amount (USD)').fill('12.34')
+  await form.getByRole('button', { name: 'Save obligation' }).click(); await expect(form).not.toBeVisible()
+  await page.getByRole('link', { name: /Settings/ }).click()
+  const pending = page.waitForEvent('download'); await page.getByRole('button', { name: 'Download JSON backup', exact: true }).click()
+  const stream = await (await pending).createReadStream(); if (!stream) throw new Error('Missing backup stream')
+  const chunks: Buffer[] = []; for await (const chunk of stream) chunks.push(Buffer.from(chunk))
+  const artifact = Buffer.concat(chunks)
+  await page.getByLabel('Select an Accrynt backup file').setInputFiles({ name: 'webkit-export.json', mimeType: 'application/json', buffer: artifact })
+  await expect(page.getByText('Validated backup:', { exact: false })).toBeVisible()
+  page.once('dialog', dialog => dialog.accept())
+  await page.getByRole('button', { name: 'Replace local records with backup' }).click()
+  await expect(page.getByText('Validated backup:', { exact: false })).not.toBeVisible()
+  await page.getByRole('link', { name: /Monthly Plan/ }).click(); await page.reload()
+  await expect(page.getByRole('row').filter({ hasText: 'Synthetic WebKit bill' })).toContainText('$12.34')
+})

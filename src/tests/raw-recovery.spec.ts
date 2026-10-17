@@ -1,10 +1,9 @@
 import Dexie from 'dexie'
 import { readFileSync } from 'node:fs'
-import { expect, it, vi } from 'vitest'
+import { expect, it } from 'vitest'
 import { AccryntDatabase } from '../data/database'
 import { readRawRecovery } from '../data/raw-recovery'
 import { validateBackup } from '../data/backup'
-import { approveWorkspaceReload } from '../domain/update'
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/v3-original-export.json', import.meta.url), 'utf8'))
 it('preserves every legacy table after repeated failed upgrades without running another migration', async () => {
@@ -42,14 +41,4 @@ it('reads current native v4 records unchanged without schema validation or repai
     expect(raw.tables.months).toEqual(await current.months.toArray())
     expect(Object.keys(raw.tables)).toHaveLength(7)
   } finally { current.close(); await Dexie.delete(name) }
-})
-it('lets a user cancel an update while a form is open, and otherwise avoids needless confirmation', () => {
-  const ask = vi.fn(() => false)
-  const openForm = { querySelector: () => ({} as Element) }
-  expect(approveWorkspaceReload(openForm, ask)).toBe(false)
-  expect(ask).toHaveBeenCalledTimes(1)
-  expect(approveWorkspaceReload(openForm, () => true)).toBe(true)
-  ask.mockClear()
-  expect(approveWorkspaceReload({ querySelector: () => null }, ask)).toBe(true)
-  expect(ask).not.toHaveBeenCalled()
 })

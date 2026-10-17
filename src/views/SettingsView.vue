@@ -3,7 +3,7 @@ import { errorMessage } from '../domain/errors'
 import { computed, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import { useFinanceStore } from '../stores/finance'
-import { exportBackup, restoreBackup, validateBackup, downloadFile, recoverySnapshot } from '../data/backup'
+import { exportBackup, restoreBackup, readBackupFile, serializeBackup, BACKUP_MAX_BYTES, BACKUP_REVIEW_BYTES, backupSizeMessage, downloadFile, recoverySnapshot } from '../data/backup'
 import { loadOctoberExample } from '../data/example'
 import type { Backup } from '../domain/models'
 import { isDemo, databaseName, workspaceUrl } from '../data/workspace'
@@ -53,7 +53,7 @@ async function exportData() {
   busy.value = true; error.value = ''
   try {
     const backup = await exportBackup()
-    downloadFile(`Accrynt-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2))
+    downloadFile(`Accrynt-backup-${new Date().toISOString().slice(0, 10)}.json`, serializeBackup(backup))
     store.notify('Portable JSON backup prepared. Keep another copy outside this browser.')
   } catch (e) { handleError(e) } finally { busy.value = false }
 }
@@ -65,11 +65,12 @@ async function chooseBackup(event: Event) {
   importError.value = ''
   const file = selectedFile.value
   if (!file) return
-  if (file.size > 15_000_000) { importError.value = 'Backup exceeds the 15 MB import limit.'; return }
+  if (file.size > BACKUP_MAX_BYTES) { importError.value = backupSizeMessage; return }
+  if (file.size > BACKUP_REVIEW_BYTES && !confirm('This is a large backup (over 15 MB). Validation may take time and additional browser memory. The supported limit is 64 MB. Validate this file? No records will change until you confirm replacement.')) return
   try {
-    const content: unknown = JSON.parse(await file.text())
+    const data = await readBackupFile(file)
     if (version !== selectionVersion) return
-    readyBackup.value = validateBackup(content)
+    readyBackup.value = data
   } catch (e) { if (version !== selectionVersion) return; importError.value = errorMessage(e, 'The selected file is not a valid Accrynt backup.') }
 }
 async function restore() {
@@ -130,17 +131,20 @@ async function clearAll() {
     <div class="settings-column">
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">APPEARANCE</span><h2>Interface</h2></div></div>
       <div class="setting-row"><div><strong>Color theme</strong><p>Carbon × Glacier, with an off-gray light mode and graphite dark mode.</p></div><select :value="store.theme" aria-label="Theme" @change="store.setTheme(($event.target as HTMLSelectElement).value as 'light' | 'dark')"><option value="light">Light</option><option value="dark">Dark</option></select></div>
-      <div class="setting-row"><div><strong>Storage engine</strong><p>IndexedDB via Dexie. No account, server, banking connection, or cloud sync.</p></div><span class="status-pill">LOCAL</span></div>
+      <p class="fine-print">No account, server, banking connection, or cloud sync.</p>
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">BROWSER STORAGE</span><h2>Data location</h2></div></div>
-      <p class="body-copy">Records are stored in your browser's IndexedDB database <code>{{ databaseName }}</code>, tied to this website's origin and browser profile. Clearing site data or changing devices will not preserve them automatically.</p>
+      <p class="body-copy">Records stay in this browser profile on this device. Clearing site data or changing devices will not preserve them automatically.</p>
+      <details class="details-panel"><summary>Technical storage details</summary><p class="body-copy">IndexedDB via Dexie · database <code>{{ databaseName }}</code> · native schema v4 · portable backup v5. Storage belongs to this website’s origin and browser profile.</p></details>
       <div class="setting-row"><div><strong>Storage estimate</strong><p>{{ storageEstimate }}</p></div><button class="button small" @click="storageInfo">Check</button></div>
       <div class="setting-row"><div><strong>Persistent storage</strong><p>{{ requestingPersistence ? 'Waiting for your browser’s permission decision' : persisted === true ? 'Granted' : persisted === false ? 'Not granted' : 'Not checked' }}. A request may be declined by the browser.</p></div><button class="button small" :disabled="requestingPersistence" @click="requestPersistence">{{ requestingPersistence ? 'Waiting…' : 'Request' }}</button></div>
     </section>
     </div>
     <div class="settings-column">
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">YOUR RECORDS</span><h2>Backup & restore</h2></div></div>
-      <p class="body-copy">Export a portable v5 JSON archive. This version requires the updated app; older app versions cannot read v5 exports. Imports from v1–v4 remain supported. Save it somewhere outside this browser. Restore replaces all records only after validation and explicit confirmation.</p>
+      <p class="body-copy">Download a portable JSON backup and keep a copy outside this browser. Restore validates the file before you confirm replacement of all local records.</p>
+      <p class="fine-print">Up to 64 MB of UTF-8 JSON; files over 15 MB need an extra validation review. Oversized exports require manual recovery and are not usable portable backups.</p>
+      <details class="details-panel"><summary>Backup compatibility</summary><p class="body-copy">Exports use portable v5 and require an updated app. Older app versions cannot read v5 exports. Imports from v1–v4 remain supported.</p></details>
       <div class="data-counts"><span>{{ rowCounts.months }} months</span><span>{{ rowCounts.obligations }} obligations</span><span>{{ rowCounts.transactions }} transactions</span><span>{{ rowCounts.debts }} debts</span><span>{{ rowCounts.recurringRules }} recurring rules</span><span>{{ rowCounts.recurringOccurrences }} recurring entries</span></div>
       <button class="button primary" :disabled="busy" @click="exportData">Download JSON backup</button>
       <details class="details-panel"><summary>Recovery for damaged records</summary><p class="body-copy">If portable validation fails, preserve an unvalidated raw copy for manual repair. Raw recovery files cannot be imported directly.</p><button class="button" :disabled="busy" @click="exportRecovery">Download recovery data</button></details>

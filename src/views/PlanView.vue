@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useEditorDraft } from '../composables/editorDraft'
 import { errorMessage } from '../domain/errors'
-import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ObligationForm from '../components/ObligationForm.vue'
 import PaymentForm from '../components/PaymentForm.vue'
@@ -9,8 +11,10 @@ import CopyMonthForm from '../components/CopyMonthForm.vue'
 import { useFinanceStore } from '../stores/finance'
 import { localRepository } from '../data/repository'
 import { formatMoney, parseMoney, dueDate } from '../domain/finance'
-import type { Obligation } from '../domain/models'
+import type { MonthPlan, Obligation } from '../domain/models'
+const route = useRoute()
 const store = useFinanceStore()
+let monthBaseline: MonthPlan | null = null
 const editorOpen = ref(false)
 const editing = ref<Obligation | null>(null)
 const paymentOpen = ref(false), paying = ref<Obligation | null>(null)
@@ -41,14 +45,14 @@ watch(() => store.month, () => { editingIncome.value = false; incomeDraft.value 
 const rows = computed(() => store.monthObligations.filter(r => r.name.toLowerCase().includes(query.value.toLowerCase()) &&
   (filter.value === 'all' || (filter.value === 'paid' ? state(r).paid : !state(r).paid))))
 function openForm(record: Obligation | null = null) { editing.value = record; editorOpen.value = true }
-function startIncome() { incomeDraft.value = ((store.monthData?.incomeCents ?? 0) / 100).toFixed(2); editingIncome.value = true }
+function startIncome() { monthBaseline = store.monthData ? { ...store.monthData } : null; incomeDraft.value = ((store.monthData?.incomeCents ?? 0) / 100).toFixed(2); editingIncome.value = true }
 async function saveIncome() {
   if (busy.value) return
   const targetMonth = store.month
   const cents = parseMoney(incomeDraft.value)
   if (cents === null) { store.notify('Enter a valid income amount.'); return }
   busy.value = true
-  try { await localRepository.saveIncome(targetMonth, cents); editingIncome.value = false; store.notify('Expected income saved.') }
+  try { await localRepository.saveIncome(targetMonth, cents, monthBaseline); editingIncome.value = false; store.notify('Expected income saved.') }
   catch (e) { store.fail(errorMessage(e, 'Unable to save income.')) }
   finally { busy.value = false }
 }
@@ -62,17 +66,22 @@ async function remove(record: Obligation) {
   catch (e) { store.fail(errorMessage(e, 'Unable to delete.')) }
 }
 function copyPrevious() { copyTarget.value = store.month; copyOpen.value = true }
+onMounted(() => { if (route.query.setup === 'income') startIncome(); else if (route.query.setup === 'bill') openForm() })
+const draftGuard = useEditorDraft({
+  label: 'additional expected income', open: () => editingIncome.value, draft: () => incomeDraft.value, busy,
+  save: () => saveIncome(), close: () => { editingIncome.value = false }
+})
 </script>
 <template>
   <PageHeader label="02 / MONTHLY PLAN" title="Monthly plan" subtitle="Expected income, recurring obligations, and completion status." month-navigation>
     <template #actions><button class="button primary" @click="openForm()">+ Add obligation</button></template>
   </PageHeader>
   <div class="metrics-grid three">
-    <article class="metric-card"><div class="metric-label">Expected income</div><div class="metric-value mono">{{ formatMoney(store.expectedIncomeCents) }}</div><p class="metric-detail">{{ formatMoney(store.expectedIncomeCents - (store.monthData?.incomeCents ?? 0)) }} recurring + {{ formatMoney(store.monthData?.incomeCents ?? 0) }} additional</p><div class="metric-actions"><button class="text-link" @click="startIncome">Edit additional income ↗</button><button v-if="store.expectedOccurrences.length" class="text-link" @click="recurringPanel?.focusIncome()">Review scheduled income ({{ store.expectedOccurrences.length }}) ↓</button></div></article>
+    <article class="metric-card"><div class="metric-label">Expected income</div><div class="metric-value mono">{{ formatMoney(store.expectedIncomeCents) }}</div><p class="metric-detail">{{ formatMoney(store.expectedIncomeCents - (store.monthData?.incomeCents ?? 0)) }} recurring + {{ formatMoney(store.monthData?.incomeCents ?? 0) }} additional</p><div class="metric-actions"><button class="text-link" @click="!editingIncome && startIncome()" :disabled="editingIncome">Edit additional income ↗</button><button v-if="store.expectedOccurrences.length" class="text-link" @click="recurringPanel?.focusIncome()">Review scheduled income ({{ store.expectedOccurrences.length }}) ↓</button></div></article>
     <article class="metric-card"><div class="metric-label">Planned outflow</div><div class="metric-value mono">{{ formatMoney(store.summary.plannedCents) }}</div><p class="metric-detail">{{ store.summary.obligationCount }} obligations</p></article>
     <article class="metric-card metric-emphasis"><div class="metric-label">Unallocated</div><div class="metric-value mono" :class="{ 'negative-text': store.summary.remainingCents < 0 }">{{ formatMoney(store.summary.remainingCents) }}</div><p class="metric-detail">Not a verified bank balance</p></article>
   </div>
-  <section v-if="editingIncome" class="panel inline-editor"><h2>Additional expected income for {{ store.month }}</h2><p class="body-copy">Scheduled recurring income is added separately. Enter only additional income here to avoid counting it twice.</p><form class="inline-form" @submit.prevent="saveIncome"><label>USD <input v-model="incomeDraft" inputmode="decimal" required /></label><button class="button primary" :disabled="busy">Save</button><button class="button" type="button" @click="editingIncome = false">Cancel</button></form></section>
+  <section v-if="editingIncome" class="panel inline-editor"><h2>Additional expected income for {{ store.month }}</h2><p class="body-copy">Scheduled recurring income is added separately. Enter only additional income here to avoid counting it twice.</p><form class="inline-form" @submit.prevent="saveIncome"><fieldset class="editor-fields inline-fields" :disabled="busy"><label>USD <input v-model="incomeDraft" inputmode="decimal" required /></label><button class="button primary" :disabled="busy">Save</button><button class="button" type="button" :disabled="busy" @click="draftGuard.close()">Cancel</button></fieldset></form></section>
   <section class="panel">
     <div class="panel-heading"><div><span class="eyebrow">OBLIGATION REGISTER</span><h2>Planned payments</h2></div><button v-if="canCopy" class="button small" @click="copyPrevious">Copy previous month</button></div>
     <div class="table-controls"><input v-model="query" aria-label="Search obligations" placeholder="Search obligations…" /><select v-model="filter" aria-label="Filter payment status"><option value="all">All statuses</option><option value="paid">Paid</option><option value="unpaid">Unpaid</option></select></div>

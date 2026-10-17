@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEditorDraft } from '../composables/editorDraft'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { localRepository } from '../data/repository'
 import { monthlyInterest } from '../domain/debt'
@@ -28,14 +29,18 @@ async function submit() {
     await localRepository.adjustDebt({ id: form.kind==='interest' ? `interest:${snapshot.value.id}:${form.date.slice(0,7)}` : requestId.value,
       debtId:snapshot.value.id, expectedUpdatedAt:snapshot.value.updatedAt, kind:form.kind, date:form.date,
       amountCents:amount.value, note:form.note.trim(), period:form.kind==='interest'?form.date.slice(0,7):undefined })
-    emit('update:modelValue',false); store.notify('Balance adjustment recorded. No cash Ledger entry was created.')
+    emit('update:modelValue', false); store.notify('Balance adjustment recorded. No cash Ledger entry was created.')
   } catch(reason) { error.value=errorMessage(reason) } finally { busy.value=false }
 }
+const draftGuard = useEditorDraft({
+  label: 'balance adjustment', open: () => props.modelValue, draft: () => (form), busy,
+  save: () => submit(), close: () => { emit('update:modelValue', false) }, element: dialog
+})
 </script>
 <template>
-  <dialog ref="dialog" class="modal-panel native-dialog" aria-label="Adjust debt balance" @close="emit('update:modelValue',false)" @cancel="busy && $event.preventDefault()">
-    <div class="modal-heading"><h2>Adjust {{ snapshot?.name }}</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="emit('update:modelValue',false)">✕</button></div>
-    <form @submit.prevent="submit">
+  <dialog ref="dialog" class="modal-panel native-dialog" aria-label="Adjust debt balance" @close="emit('update:modelValue', false)" @cancel.prevent="draftGuard.close()">
+    <div class="modal-heading"><h2>Adjust {{ snapshot?.name }}</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="draftGuard.close()">✕</button></div>
+    <form @submit.prevent="submit"><fieldset class="editor-fields" :disabled="busy">
       <label>Adjustment type<select v-model="form.kind"><option value="statement">Match actual statement balance</option><option value="interest" :disabled="snapshot?.interestMethod !== 'monthly'">Post monthly interest estimate</option><option value="fee">Add fee</option><option value="purchase">Add purchase / charge</option><option value="refund">Apply refund / credit</option></select></label>
       <label>Effective date<input v-model="form.date" type="date" required :max="localDate()" :min="snapshot?.balanceAsOf ?? undefined" /></label>
       <label v-if="form.kind!=='interest'">{{ form.kind==='statement' ? 'New statement balance (USD)' : form.kind==='refund' ? 'Refund amount (USD, negative)' : 'Charge amount (USD)' }}<input v-model="form.amount" inputmode="decimal" required /></label>
@@ -45,7 +50,7 @@ async function submit() {
         <p class="form-hint">No cash transaction is created. Use Record payment for money paid. Latest balance events can be reversed from history; older events require newer events to be undone first.</p>
       </section>
       <p v-if="error" class="error-message" role="alert">{{ error }}</p>
-      <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="emit('update:modelValue',false)">Cancel</button><button class="button primary" :disabled="busy">Confirm balance adjustment</button></div>
-    </form>
+      <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="draftGuard.close()">Cancel</button><button class="button primary" :disabled="busy">Confirm balance adjustment</button></div>
+    </fieldset></form>
   </dialog>
 </template>

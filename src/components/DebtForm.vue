@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEditorDraft } from '../composables/editorDraft'
 import { errorMessage } from '../domain/errors'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import DebtForecast from './DebtForecast.vue'
@@ -53,11 +54,15 @@ async function submit() {
   } catch (e) { error.value = errorMessage(e, 'Unable to save debt.') }
   finally { busy.value = false }
 }
+const draftGuard = useEditorDraft({
+  label: 'debt', open: () => props.modelValue, draft: () => (form), busy,
+  save: () => submit(), close: () => { emit('update:modelValue', false) }, element: dialogElement
+})
 </script>
 <template>
-  <dialog ref="dialogElement" class="modal-panel native-dialog" @cancel="busy && $event.preventDefault()" aria-label="Debt" @close="emit('update:modelValue', false)">
-      <div class="modal-heading"><h2>{{ record ? 'Edit debt' : 'Add a debt' }}</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="emit('update:modelValue', false)">✕</button></div>
-      <form @submit.prevent="submit">
+  <dialog ref="dialogElement" class="modal-panel native-dialog" @cancel.prevent="draftGuard.close()" aria-label="Debt" @close="emit('update:modelValue', false)">
+      <div class="modal-heading"><h2>{{ record ? 'Edit debt' : 'Add a debt' }}</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="draftGuard.close()">✕</button></div>
+      <form @submit.prevent="submit"><fieldset class="editor-fields" :disabled="busy">
         <label>Name<input v-model="form.name" required maxlength="100" placeholder="Personal loan, credit card…" /></label>
         <label>Current balance (USD)<input v-model="form.balance" required inputmode="decimal" placeholder="1500.00" /></label>
         <label>Balance as of date (optional)<input v-model="form.asOf" type="date" /></label>
@@ -73,7 +78,7 @@ async function submit() {
         <p v-else class="form-hint">Enter a valid balance, minimum, and optional payment/rate to preview calculations.</p>
         <p class="form-hint">Forecasts update automatically. Use Record payment to apply a confirmed principal reduction. Changing the saved balance or reference date records a reversible statement adjustment.</p>
         <p v-if="error" class="error-message" role="alert">{{ error }}</p>
-        <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="emit('update:modelValue', false)">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save debt' }}</button></div>
-      </form>
+        <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="draftGuard.close()">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save debt' }}</button></div>
+      </fieldset></form>
   </dialog>
 </template>

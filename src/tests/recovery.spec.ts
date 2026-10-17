@@ -17,7 +17,7 @@ it('keeps live observation after recurrence failure, suppresses automatic retrie
   try {
     await vi.waitFor(() => expect(store.recurrenceWarning).toContain('Synthetic'))
     expect(store.planIncomplete).toBe(true); expect(store.error).toBe('')
-    await repo.saveIncome(store.month, 12345)
+    await repo.saveIncome(store.month, 12345, await db.months.get(store.month) ?? null)
     await vi.waitFor(() => expect(store.monthData?.incomeCents).toBe(12345))
     expect(generation).toHaveBeenCalledTimes(1)
     generation.mockRestore()

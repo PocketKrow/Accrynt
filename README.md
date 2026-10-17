@@ -1,4 +1,4 @@
-# Accrynt · v0.7
+# Accrynt · v0.8
 
 A personal, local-first finance workspace built with **Vue 3 + Vite + TypeScript + SCSS + Pinia + Vue Router + Dexie/IndexedDB + Zod**. The Carbon × Glacier identity, full-viewport workspace, six sections, and right desktop rail are preserved. There is no account system or backend.
 
@@ -31,6 +31,17 @@ npm run test:e2e
 ```
 
 Playwright may need system libraries. Its `install --with-deps` option supports its documented Linux distributions; CI uses Ubuntu. `ACCRYNT_CHROMIUM_PATH` optionally selects an existing Chromium executable for local tests and does not affect the app.
+
+## What v0.8 adds
+
+- Portable exports and file restores share a **64,000,000-byte UTF-8 limit**. Existing valid exports over the old 15 MB limit can be restored after an extra size review. Export refuses an oversized portable artifact; labelled raw recovery remains available for manual repair.
+- Opening cash and additional expected income use transactional field-value comparisons against the editor-opening snapshot. Concurrent edits to the other field are retained. Conflicting values or deleted months leave the draft open; cancel/reopen to review current data. Copy-month income replacement follows the same check.
+- Actual dirty tracking covers modal/inline close, Escape, route/month changes, demo reset and PWA updates. **Save and continue**, **Discard changes**, and **Keep editing** share one in-memory guard. Clean forms do not prompt; failed saves keep drafts. Reload/close uses native `beforeunload` where the browser supports it; it cannot guarantee protection on mobile OS termination and cannot offer a custom save flow there. Drafts are never auto-persisted.
+- Ordinary **Debt payment · update balance** transfers the transaction draft into the connected payment workflow. **Debt outflow only · balance unchanged** intentionally records generic Ledger outflow. Existing history is unchanged.
+- **Skipped recurring bills** can be restored for the selected month from their saved name, amount and due-day snapshot. Category/debt metadata was not retained, so restoration requires review. A new bill identity avoids reconnecting old transactions, receipts or paid marks. Paused/changed rules do not alter that saved occurrence.
+- Opening cash can be suggested from the prior completed calendar month’s recorded closing cash. Explicit acceptance and Save are required; unknown/zero/negative values stay distinct, and historical edits never cascade. First-run actions open the relevant editor directly. The displayed version comes from package.json.
+
+Native schema remains **v4**, portable exports **v5**, older v1–v4 imports remain supported, and no dependency versions or Node requirements changed. See [v0.8 implementation and validation](docs/QA-reliability-v0.8.md). This is a review milestone, not a v1 release.
 
 ## What v0.7 adds
 
@@ -88,7 +99,7 @@ The manual paid checkbox remains for payments tracked elsewhere. It only records
 
 Recurring items are **monthly plan definitions**, not background money movements. A month is generated when opened in the app, including offline. Deterministic occurrence keys and an IndexedDB transaction prevent duplicate generation across reloads or tabs. Days beyond the month's length use its last day.
 
-Use **Repeat monthly** on an existing bill to adopt that entry without duplicating it. Adding a new bill rule with the same name in its start month is rejected with a pointer to this action. Existing monthly entries are snapshots. Editing or pausing a rule affects months not generated yet; already generated months retain their edits. Deleting a generated bill leaves a skipped occurrence so it does not return on reload. Income can be edited, skipped, and restored for one month. Previous-month copy adds non-recurring bills alongside generated bills without duplicating recurrence. Existing additional income (including zero) stays unless replacement is explicitly selected; a new month can preselect previous additional income. It does not carry opening cash forward.
+Use **Repeat monthly** on an existing bill to adopt that entry without duplicating it. Adding a new bill rule with the same name in its start month is rejected with a pointer to this action. Existing monthly entries are snapshots. Editing or pausing a rule affects months not generated yet; already generated months retain their edits. Deleting a generated bill leaves a skipped occurrence so it does not return on reload. Income can be edited, skipped, and restored for one month. Skipped bills have a separate explicit restore action; historical category/debt metadata needs review, and detached payments remain detached. Previous-month copy adds non-recurring bills alongside generated bills without duplicating recurrence. Existing additional income (including zero) stays unless replacement is explicitly selected; a new month can preselect previous additional income. It does not carry opening cash forward.
 
 ## Debt forecasts
 
@@ -100,7 +111,7 @@ Payoff is a count of monthly payments, not a calendar date. Projections stop at 
 
 Records remain in IndexedDB **`accrynt-local-v1`**, now at Dexie schema version **4**. Its name is unchanged. The v4 upgrade preserves balances and receipt splits, converts legacy basis-point rates exactly (×10), adds unknown balance reference dates and creates a balance-event table. Historical Dexie versions 1–3 are unchanged. Stored data belongs to the exact origin and browser profile: domains, ports, `localhost`, `127.0.0.1`, and different browsers have separate stores. Only theme preference uses `localStorage`.
 
-**Settings → Download JSON backup** exports all seven tables using `accrynt-portable` schema **5**, including receipts, opening balances, rules, skipped entries, and monthly snapshots. Strict v1/v2/v3/v4 backups remain supported with neutral defaults for new fields. Old app releases cannot restore v5 exports. Restore validates IDs, references, receipt arithmetic, and recurrence keys before atomic replacement. The file picker has a 15 MB limit. Backups are unencrypted.
+**Settings → Download JSON backup** exports all seven tables using `accrynt-portable` schema **5**, including receipts, opening balances, rules, skipped entries, and monthly snapshots. Strict v1/v2/v3/v4 backups remain supported with neutral defaults for new fields. Old app releases cannot restore v5 exports. Restore validates IDs, references, receipt arithmetic, and recurrence keys before atomic replacement. Export and restore share a 64,000,000-byte UTF-8 limit; files over 15,000,000 bytes require an extra validation review before reading. Exports above the supported limit are refused rather than called usable portable backups. Raw recovery is for manual repair only. Backups are unencrypted.
 
 Browser data clearing, profile removal, or eviction can remove records. Persistent-storage permission may be declined and does not replace external backups. A storage error offers Retry and a separate native raw-recovery download without clearing records. Native recovery includes the actual database version and all existing stores in a `tables` object; it does not validate, migrate or repair them. Native version 30 means Dexie v3, and 40 means Dexie v4. Both this envelope and the existing Settings raw envelope are deliberately rejected by portable import. Browser-denied storage remains inaccessible, and raw JSON is intended for the app’s JSON-compatible records. Selected month starts at the current month on launch; historical plans remain accessible. Optional historical example data loads only on request into a completely empty workspace.
 

@@ -14,8 +14,8 @@ describe('foundation regressions', () => {
   it.each([0, 70000])('copies after opening/income setup, retaining %i existing income, recurring rows and opening', async income => {
     const previous = bill('2026-09'), recurring = bill('2026-10'), ruleId = newId()
     await db.obligations.bulkAdd([previous, recurring])
-    await repo.saveIncome('2026-09', 80000)
-    await repo.saveOpeningBalance('2026-10', -12345); await repo.saveIncome('2026-10', income)
+    await repo.saveIncome('2026-09', 80000, await db.months.get('2026-09') ?? null)
+    await repo.saveOpeningBalance('2026-10', -12345, await db.months.get('2026-10') ?? null); await repo.saveIncome('2026-10', income, await db.months.get('2026-10') ?? null)
     await db.recurringOccurrences.add({ id: `${ruleId}:2026-10`, ruleId, month: '2026-10', kind: 'bill', name: recurring.name, amountCents: 10000, dueDay: 8, obligationId: recurring.id, cancelled: false, updatedAt: now() })
     await repo.copyPreviousMonth('2026-10')
     expect(await db.months.get('2026-10')).toMatchObject({ openingCents: -12345, incomeCents: income })
@@ -23,8 +23,8 @@ describe('foundation regressions', () => {
     await expect(repo.copyPreviousMonth('2026-10')).rejects.toThrow('manually planned')
   })
   it('copies additional income only when explicitly selected for an existing month', async () => {
-    await repo.saveIncome('2026-09', 80000)
-    await repo.saveOpeningBalance('2026-10', 12345)
+    await repo.saveIncome('2026-09', 80000, await db.months.get('2026-09') ?? null)
+    await repo.saveOpeningBalance('2026-10', 12345, await db.months.get('2026-10') ?? null)
     await repo.copyPreviousMonth('2026-10', { copyAdditionalIncome: true })
     expect(await db.months.get('2026-10')).toMatchObject({ incomeCents: 80000, openingCents: 12345 })
   })
