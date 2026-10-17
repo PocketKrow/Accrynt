@@ -8,7 +8,28 @@ export async function exportBackup(): Promise<Backup> {
     format: 'accrynt-portable', schemaVersion: 5, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(),
     ...await readWorkspace()
   }
-  return validateBackup(data)
+  const validated = validateBackup(data)
+  serializeBackup(validated) // Every supported export must fit the file restore budget.
+  return validated
+}
+// Decimal MB. File bytes are checked before reading/parsing; record-count limits still apply.
+export const BACKUP_MAX_BYTES = 64_000_000
+export const BACKUP_REVIEW_BYTES = 15_000_000
+export const backupSizeMessage = 'Portable backups support up to 64 MB of UTF-8 JSON. This file exceeds that limit; keep it for manual recovery. Existing records have not changed.'
+export function utf8Bytes(content: string) { return new TextEncoder().encode(content).byteLength }
+export function assertBackupSize(bytes: number) {
+  if (bytes > BACKUP_MAX_BYTES) throw new Error(backupSizeMessage)
+}
+export function serializeBackup(data: Backup) {
+  const content = JSON.stringify(data, null, 2)
+  assertBackupSize(utf8Bytes(content))
+  return content
+}
+export async function readBackupFile(file: Pick<File, 'size' | 'text'>): Promise<Backup> {
+  assertBackupSize(file.size)
+  const text = await file.text()
+  assertBackupSize(utf8Bytes(text))
+  return validateBackup(JSON.parse(text))
 }
 export function validateBackup(content: unknown): Backup {
   const data = portableBackupSchema.parse(content)
@@ -94,6 +115,6 @@ export function downloadFile(filename: string, content: string, mime = 'applicat
 /** Recovery-only envelope: preserves corrupt rows without mislabelling them a portable backup. */
 export async function recoverySnapshot() {
   const current = { format: 'accrynt-portable', schemaVersion: 5, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(), ...await readWorkspace() }
-  try { return { raw: false, data: validateBackup(current) } }
+  try { const data = validateBackup(current); serializeBackup(data); return { raw: false, data } }
   catch { return { raw: true, data: { ...current, format: 'accrynt-raw-recovery', warning: 'UNVALIDATED recovery data. Not directly restorable. Preserve this file for manual repair.' } } }
 }

@@ -1,9 +1,9 @@
 import { newerBalanceEvent } from './balance-events'
 import { db } from './database'
-import { checkEdit, nextTimestamp } from './integrity'
+import { checkEdit, checkMonthField, nextTimestamp } from './integrity'
 import { paymentSplit } from '../domain/payment'
 import { localDate, monthKeySchema, monthSchema, newId, now, recurringOccurrenceSchema,
-  recurringRuleSchema, transactionSchema, type RecurringRule } from '../domain/models'
+  recurringRuleSchema, transactionSchema, obligationSchema, type Category, type MonthPlan, type RecurringRule } from '../domain/models'
 
 export interface RecordPaymentInput {
   id: string; date: string; name: string; amountCents: number; interestCents: number; account: string
@@ -13,10 +13,11 @@ export interface RecordPaymentInput {
 }
 
 export const connectedRepository = {
-  async saveOpeningBalance(month: string, openingCents: number | null) {
+  async saveOpeningBalance(month: string, openingCents: number | null, baseline: MonthPlan | null) {
     monthKeySchema.parse(month)
     await db.transaction('rw', db.months, async () => {
       const previous = await db.months.get(month)
+      checkMonthField(previous, baseline, 'openingCents')
       await db.months.put(monthSchema.parse({ key: month, incomeCents: previous?.incomeCents ?? 0,
         openingCents, updatedAt: previous ? nextTimestamp(previous.updatedAt) : now() }))
     })
@@ -123,6 +124,29 @@ export const connectedRepository = {
           kind: rule.kind, name: rule.name, amountCents: rule.amountCents, dueDay: rule.dueDay,
           obligationId, cancelled: false, updatedAt: stamp }))
       }
+    })
+  },
+  async restoreSkippedBill(id: string, expectedUpdatedAt: string, links: { category: Category; debtId: string | null }) {
+    return db.transaction('rw', db.recurringOccurrences, db.obligations, db.debts, async () => {
+      const row = await db.recurringOccurrences.get(id)
+      if (!row || row.kind !== 'bill') throw new Error('This skipped bill no longer exists.')
+      // Concurrent/repeated restores return the one existing bill, never generate another.
+      if (!row.cancelled) {
+        const existing = row.obligationId ? await db.obligations.get(row.obligationId) : undefined
+        if (!existing) throw new Error('The restored bill no longer exists. Review this month before retrying.')
+        if (existing.category !== links.category || existing.debtId !== links.debtId) throw new Error('Another tab restored this bill with different links. Your draft is kept; cancel and review the current bill.')
+        return existing
+      }
+      checkEdit(row, expectedUpdatedAt)
+      if (links.debtId && !await db.debts.get(links.debtId)) throw new Error('The selected debt no longer exists. Review the debt link; your draft is kept.')
+      const stamp = nextTimestamp(row.updatedAt)
+      const bill = obligationSchema.parse({ id: newId(), month: row.month, name: row.name,
+        plannedCents: row.amountCents, dueDay: row.dueDay, category: links.category,
+        debtId: links.debtId, paidAt: null, updatedAt: stamp })
+      await db.obligations.add(bill)
+      await db.recurringOccurrences.update(id, { cancelled: false, obligationId: bill.id, updatedAt: stamp })
+      // A new identity deliberately leaves deleted bills' receipts/transactions detached.
+      return bill
     })
   },
   async saveExpectedOccurrence(id: string, amountCents: number, dueDay: number | null, cancelled: boolean, expectedUpdatedAt: string) {

@@ -22,6 +22,7 @@ test('explicit partial receipts preserve plan income, support future edits/unlin
     await transaction.getByLabel('Description', { exact: true }).fill(name)
     await transaction.getByLabel('Amount (USD)', { exact: true }).fill(amount)
     await transaction.getByRole('button', { name: 'Save transaction' }).click()
+  await expect(transaction).not.toBeVisible()
     await expect(transaction).not.toBeVisible()
   }
   await expect(scheduled).toContainText('$500.00 received'); await expect(expected).toContainText('$500.00')
@@ -33,12 +34,14 @@ test('explicit partial receipts preserve plan income, support future edits/unlin
   await page.getByRole('button', { name: 'Edit Synthetic deposit one', exact: true }).click()
   await transaction.getByLabel('Date', { exact: true }).fill('2026-10-20')
   await transaction.getByRole('button', { name: 'Save transaction' }).click()
+  await expect(transaction).not.toBeVisible()
   await expect(page.getByRole('row').filter({ hasText: 'Synthetic deposit one' })).toContainText('Scheduled · excluded from actuals')
   await page.goto('/#/plan'); await expect(scheduled).toContainText('$300.00 received'); await expect(scheduled).toContainText('$200.00 scheduled')
   await expect(expected).toContainText('$500.00'); await page.reload(); await expect(scheduled).toContainText('$300.00 received')
   await page.goto('/#/ledger'); await page.getByRole('button', { name: 'Edit Synthetic deposit two', exact: true }).click()
   await transaction.getByLabel('Scheduled income link (optional)').selectOption('')
   await transaction.getByRole('button', { name: 'Save transaction' }).click()
+  await expect(transaction).not.toBeVisible()
   await page.goto('/#/plan'); await expect(scheduled).toContainText('$0.00 received'); await expect(expected).toContainText('$500.00')
 })
 test('recurrence failure leaves live writes working, warns about incomplete totals and retries explicitly', async ({ page }) => {

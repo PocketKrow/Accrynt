@@ -36,6 +36,7 @@ test('income drafts close on month changes; paid bills stay separate from ledger
   const input = page.locator('.inline-editor input')
   await input.fill('1234.56')
   await page.getByRole('button', { name: 'Next month' }).click()
+  await page.getByRole('button', { name: 'Discard changes', exact: true }).click()
   await expect(input).not.toBeVisible()
   await page.getByRole('button', { name: 'Edit additional income' }).click()
   await expect(input).toHaveValue('0.00')

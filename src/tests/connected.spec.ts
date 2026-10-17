@@ -172,7 +172,7 @@ describe('monthly recurrence', () => {
   it('copies manual bills alongside generated bills without duplicating recurrence', async () => {
     const r = rule(); await db.recurringRules.add(r)
     await repo.ensureRecurringMonth('2026-01'); await repo.ensureRecurringMonth('2026-02')
-    await repo.saveIncome('2026-01', 50000); await repo.saveOpeningBalance('2026-01', 12345)
+    await repo.saveIncome('2026-01', 50000, await db.months.get('2026-01') ?? null); await repo.saveOpeningBalance('2026-01', 12345, await db.months.get('2026-01') ?? null)
     await db.obligations.add({ ...bill(), name: 'One-off bill', debtId: null })
     await repo.copyPreviousMonth('2026-02')
     const february = await db.obligations.where('month').equals('2026-02').toArray()
@@ -195,9 +195,9 @@ describe('cashflow and comparisons', () => {
     expect(availableMoney('2026-01', -1000, [], [], '2026-01-15').afterBillsCents).toBe(-1000)
   })
   it('keeps opening balances and expected income independent on save', async () => {
-    await repo.saveOpeningBalance('2026-01', -1234); await repo.saveIncome('2026-01', 50000)
+    await repo.saveOpeningBalance('2026-01', -1234, await db.months.get('2026-01') ?? null); await repo.saveIncome('2026-01', 50000, await db.months.get('2026-01') ?? null)
     expect(await db.months.get('2026-01')).toMatchObject({ openingCents: -1234, incomeCents: 50000 })
-    await repo.saveOpeningBalance('2026-01', null)
+    await repo.saveOpeningBalance('2026-01', null, await db.months.get('2026-01') ?? null)
     expect((await db.months.get('2026-01'))?.incomeCents).toBe(50000)
     expect(parseSignedMoney('-1,234.56')).toBe(-123456)
     expect(parseSignedMoney('--5')).toBeNull()
@@ -244,7 +244,7 @@ describe('v3 data recovery', () => {
   })
   it('roundtrips receipts, opening cash, rules, and generated entries atomically', async () => {
     const { d, o } = await seed(); await repo.recordPayment(payment(d, o))
-    await repo.saveOpeningBalance('2026-01', 123456); await db.recurringRules.add(rule('income')); await repo.ensureRecurringMonth('2026-01')
+    await repo.saveOpeningBalance('2026-01', 123456, await db.months.get('2026-01') ?? null); await db.recurringRules.add(rule('income')); await repo.ensureRecurringMonth('2026-01')
     const backup = await exportBackup(); await clearWorkspace(); await restoreBackup(JSON.parse(JSON.stringify(backup)))
     expect(await exportBackup()).toMatchObject({ ...backup, exportedAt: expect.any(String) })
     const { interestIncludedInBalance: _flag, ...olderDraftReceipt } = backup.transactions[0].payment!

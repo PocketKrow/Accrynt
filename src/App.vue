@@ -8,7 +8,9 @@ import BrandMark from './components/BrandMark.vue'
 import StorageRecovery from './components/StorageRecovery.vue'
 import { useFinanceStore } from './stores/finance'
 import { formatMoney, longMonth } from './domain/finance'
-import { approveWorkspaceReload } from './domain/update'
+import DraftReview from './components/DraftReview.vue'
+import { reviewDrafts, protectUnload } from './composables/editorDraft'
+import { version } from '../package.json'
 
 const store = useFinanceStore()
 const router = useRouter()
@@ -16,9 +18,10 @@ store.start()
 const modeLabel = computed(() => store.theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode')
 const monthLabel = computed(() => longMonth(store.month))
 const { needRefresh, updateServiceWorker } = useRegisterSW()
-function applyUpdate() {
-  if (approveWorkspaceReload(document, () => confirm('A form is open. Updating reloads Accrynt and discards any unsaved entries in it. Update now?'))) void updateServiceWorker()
-}
+async function applyUpdate() { if (await reviewDrafts()) await updateServiceWorker(true) }
+const removeNavigationGuard = router.beforeEach(() => reviewDrafts())
+window.addEventListener('beforeunload', protectUnload)
+onUnmounted(() => { removeNavigationGuard(); window.removeEventListener('beforeunload', protectUnload) })
 const nav = [
   { path: '/', title: 'Overview', icon: '▦' },
   { path: '/plan', title: 'Monthly Plan', icon: '☷' },
@@ -87,10 +90,11 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
             <div class="rail-row"><span>Planned outflow</span><strong class="mono">{{ formatMoney(store.summary.plannedCents) }}</strong></div>
             <div class="rail-row"><span>Unpaid items</span><strong class="mono">{{ store.summary.unpaidCount }}</strong></div>
           </div>
-          <div class="rail-footer"><span class="dot" /> PRIVATE BY DESIGN <span class="mono">v0.7</span></div>
+          <div class="rail-footer"><span class="dot" /> PRIVATE BY DESIGN <span class="mono">v{{ version }}</span></div>
         </aside>
       </div>
     </div>
+    <DraftReview />
     <div v-if="store.notice" class="toast" role="status" aria-live="polite">{{ store.notice }}</div>
     <div v-if="needRefresh" class="update-banner" role="status">An offline app update is available. <button class="button primary" @click="applyUpdate">Update and reload</button></div>
   </div>

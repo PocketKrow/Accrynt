@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEditorDraft } from '../composables/editorDraft'
 import { errorMessage } from '../domain/errors'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { localRepository } from '../data/repository'
@@ -9,7 +10,7 @@ import { localDate, newId, type Debt, type Obligation } from '../domain/models'
 import { paymentSplit } from '../domain/payment'
 import { useFinanceStore } from '../stores/finance'
 
-const props = defineProps<{ modelValue: boolean; debt?: Debt | null; obligation?: Obligation | null }>()
+const props = defineProps<{ modelValue: boolean; debt?: Debt | null; obligation?: Obligation | null; seed?: { date: string; name: string; amount: string; account: string } | null }>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 const store = useFinanceStore(), dialog = ref<HTMLDialogElement | null>(null)
 const busy = ref(false), error = ref(''), requestId = ref('')
@@ -65,6 +66,13 @@ watch(() => props.modelValue, async open => {
     form.obligationId = props.obligation?.id ?? ''
     form.date = store.month < localDate().slice(0, 7) ? `${store.month}-01` : localDate()
     form.account = ''; capture(true)
+    if (props.seed) {
+      form.date = props.seed.date
+      capture(true)
+      if (props.seed.name) { form.name = props.seed.name; edited.name = true }
+      if (props.seed.amount) { form.amount = props.seed.amount; edited.amount = true }
+      form.account = props.seed.account
+    }
     initializing = false
   }
   await nextTick()
@@ -92,11 +100,15 @@ async function submit() {
   } catch (reason) { error.value = errorMessage(reason, 'Unable to record payment.') }
   finally { busy.value = false }
 }
+const draftGuard = useEditorDraft({
+  label: 'payment', open: () => props.modelValue, draft: () => ({ form, interestIncludedInBalance: interestIncludedInBalance.value }), busy,
+  save: () => submit(), close: () => { emit('update:modelValue', false) }, element: dialog
+})
 </script>
 <template>
-  <dialog ref="dialog" class="modal-panel native-dialog" aria-label="Record payment" @cancel="busy && $event.preventDefault()" @close="emit('update:modelValue', false)">
-    <div class="modal-heading"><h2>Record payment</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="emit('update:modelValue', false)">✕</button></div>
-    <form @submit.prevent="submit">
+  <dialog ref="dialog" class="modal-panel native-dialog" aria-label="Record payment" @cancel.prevent="draftGuard.close()" @close="emit('update:modelValue', false)">
+    <div class="modal-heading"><h2>Record payment</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="draftGuard.close()">✕</button></div>
+    <form @submit.prevent="submit"><fieldset class="editor-fields" :disabled="busy">
       <label>Debt<select v-model="form.debtId"><option value="">Bill only · no debt balance change</option><option v-for="item in store.debts" :key="item.id" :value="item.id">{{ item.name }}</option></select></label>
       <label>Related obligation<select v-model="form.obligationId"><option value="">No obligation</option><option v-for="item in choices" :key="item.id" :value="item.id">{{ item.name }} · {{ item.month }}</option></select></label>
       <label>Payment date<input v-model="form.date" required type="date" :max="localDate()" /></label>
@@ -117,7 +129,7 @@ async function submit() {
       <p v-if="preview.error" class="form-hint">{{ preview.error }}</p>
       <p class="form-hint">Records one Ledger entry. Linked bill status uses all recorded payments, including partial payments. Expected income and future bills do not move money.</p>
       <p v-if="error" class="error-message" role="alert">{{ error }}</p>
-      <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="emit('update:modelValue', false)">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Recording…' : 'Confirm payment' }}</button></div>
-    </form>
+      <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="draftGuard.close()">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Recording…' : 'Confirm payment' }}</button></div>
+    </fieldset></form>
   </dialog>
 </template>

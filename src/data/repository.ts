@@ -1,5 +1,5 @@
 import { db } from './database'
-import { checkEdit, nextTimestamp } from './integrity'
+import { checkEdit, checkMonthField, nextTimestamp } from './integrity'
 import { balanceRepository, statementEvent } from './balance-events'
 import { connectedRepository } from './connected'
 import { shiftMonth } from '../domain/finance'
@@ -11,10 +11,11 @@ import {
 
 export const localRepository = {
   ...connectedRepository, ...balanceRepository,
-  async saveIncome(month: string, incomeCents: number) {
+  async saveIncome(month: string, incomeCents: number, baseline: MonthPlan | null) {
     monthKeySchema.parse(month)
     await db.transaction('rw', db.months, async () => {
       const previous = await db.months.get(month)
+      checkMonthField(previous, baseline, 'incomeCents')
       const data: MonthPlan = monthSchema.parse({ key: month, incomeCents, openingCents: previous?.openingCents ?? null, updatedAt: previous ? nextTimestamp(previous.updatedAt) : now() })
       await db.months.put(data)
     })
@@ -46,7 +47,8 @@ export const localRepository = {
   },
   async deleteObligation(id: string) {
     await db.transaction('rw', db.obligations, db.transactions, db.recurringOccurrences, async () => {
-      await db.recurringOccurrences.where('obligationId').equals(id).modify(row => { row.obligationId = null; row.cancelled = true; row.updatedAt = nextTimestamp(row.updatedAt) })
+      const bill = await db.obligations.get(id)
+      await db.recurringOccurrences.where('obligationId').equals(id).modify(row => { if (bill) { row.name = bill.name; row.amountCents = bill.plannedCents; row.dueDay = bill.dueDay } row.obligationId = null; row.cancelled = true; row.updatedAt = nextTimestamp(row.updatedAt) })
       await db.transactions.where('obligationId').equals(id).modify(row => { row.obligationId = null; row.updatedAt = nextTimestamp(row.updatedAt) })
       await db.obligations.delete(id)
     })
@@ -121,7 +123,7 @@ export const localRepository = {
       await db.debts.delete(id)
     })
   },
-  async copyPreviousMonth(target: string, options: { copyAdditionalIncome?: boolean } = {}) {
+  async copyPreviousMonth(target: string, options: { copyAdditionalIncome?: boolean; incomeBaseline?: MonthPlan | null } = {}) {
     monthKeySchema.parse(target)
     const key = shiftMonth(target, -1)
     await db.transaction('rw', db.months, db.obligations, db.recurringOccurrences, async () => {
@@ -134,6 +136,7 @@ export const localRepository = {
       const month = await db.months.get(key)
       if (!month && !source.length) throw new Error('There is no previous month to copy.')
       const copyIncome = options.copyAdditionalIncome ?? !currentConfig
+      if (copyIncome) checkMonthField(currentConfig, options.incomeBaseline ?? null, 'incomeCents')
       await db.months.put({ key: target, incomeCents: copyIncome ? month?.incomeCents ?? 0 : currentConfig?.incomeCents ?? 0, openingCents: currentConfig?.openingCents ?? null, updatedAt: currentConfig ? nextTimestamp(currentConfig.updatedAt) : now() })
       if (source.length) await db.obligations.bulkAdd(source.map(row => ({
         ...row, id: newId(), month: target, paidAt: null, updatedAt: now()

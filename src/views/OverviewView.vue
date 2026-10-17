@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEditorDraft } from '../composables/editorDraft'
 import { errorMessage } from '../domain/errors'
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -8,11 +9,14 @@ import MetricCard from '../components/MetricCard.vue'
 import ObligationForm from '../components/ObligationForm.vue'
 import TransactionForm from '../components/TransactionForm.vue'
 import PaymentForm from '../components/PaymentForm.vue'
+import { openingSuggestion } from '../domain/opening'
 import { monthlyInterest } from '../domain/debt'
 import { formatMoney, longMonth, parseSignedMoney, dueDate } from '../domain/finance'
-import { type Obligation } from '../domain/models'
+import { type MonthPlan, type Obligation } from '../domain/models'
 import { localRepository } from '../data/repository'
 const store = useFinanceStore()
+let monthBaseline: MonthPlan | null = null
+const suggestion = ref<ReturnType<typeof openingSuggestion>>(null)
 const transactionOpen = ref(false)
 const showForm = ref(false), paymentOpen = ref(false), paying = ref<Obligation | null>(null)
 const openingEditor = ref(false), openingDraft = ref(''), busy = ref(false)
@@ -30,13 +34,18 @@ const allUpcoming = computed(() => store.obligations.filter(o => o.month !== sto
 const upcoming = computed(() => allUpcoming.value.slice(0, 4))
 const amount = (value: number | null) => value === null ? '—' : formatMoney(value)
 watch(() => store.month, () => { openingEditor.value = false; openingDraft.value = '' })
-function editOpening() { openingDraft.value = store.monthData?.openingCents == null ? '' : (store.monthData.openingCents / 100).toFixed(2); openingEditor.value = true }
+function editOpening() {
+  suggestion.value = openingSuggestion(store.month, store.today, store.months, store.transactions)
+  monthBaseline = store.monthData ? { ...store.monthData } : null
+  openingDraft.value = store.monthData?.openingCents == null ? '' : (store.monthData.openingCents / 100).toFixed(2)
+  openingEditor.value = true
+}
 async function saveOpening(clear = false) {
   if (busy.value) return
   const cents = clear ? null : parseSignedMoney(openingDraft.value), target = store.month
   if (!clear && cents === null) { store.notify('Enter a valid opening balance; negative balances are supported.'); return }
   busy.value = true
-  try { await localRepository.saveOpeningBalance(target, cents); openingEditor.value = false; store.notify(clear ? 'Opening balance cleared.' : 'Opening balance saved.') }
+  try { await localRepository.saveOpeningBalance(target, cents, monthBaseline); openingEditor.value = false; store.notify(clear ? 'Opening balance cleared.' : 'Opening balance saved.') }
   catch (reason) { store.fail(errorMessage(reason, 'Unable to save opening balance.')) }
   finally { busy.value = false }
 }
@@ -46,20 +55,24 @@ function dueLabel(item: Obligation) {
   const date = dueDate(item.month, item.dueDay)
   return `${date < store.today ? 'Overdue · ' : 'Due '}${date}`
 }
+const draftGuard = useEditorDraft({
+  label: 'opening balance', open: () => openingEditor.value, draft: () => openingDraft.value, busy,
+  save: () => saveOpening(), close: () => { openingEditor.value = false }
+})
 </script>
 <template>
   <PageHeader label="01 / WORKSPACE" :title="`${longMonth(store.month).split(' ')[0]} at a glance`" subtitle="Your recorded money, outstanding bills, and next actions." month-navigation>
     <template #actions><button class="button" @click="transactionOpen = true">+ Record transaction</button><button class="button primary" @click="showForm = true">+ Add obligation</button></template>
   </PageHeader>
-  <p v-if="!store.hasAnyData" class="body-copy">Set your opening balance, then add bills in <RouterLink class="text-link" to="/plan">Monthly Plan</RouterLink>. Record income when it arrives. Your workspace stays on this device.</p>
+  <section v-if="!store.hasAnyData" class="panel first-run" aria-label="Get started"><h2>Set up your first month</h2><p class="body-copy">Start with money on hand, expected income, and a bill. Record deposits when they arrive. Your workspace stays on this device.</p><div class="page-actions"><button class="button" @click="!openingEditor && editOpening()">Set opening cash</button><RouterLink class="button" to="/plan?setup=income">Set expected income</RouterLink><RouterLink class="button" to="/plan?setup=bill">Add first bill</RouterLink></div></section>
   <div class="metrics-grid">
     <MetricCard label="Tracked available" :value="amount(store.cashflow.trackedCents)" detail="Opening balance + recorded net to date" />
     <MetricCard label="After outstanding bills" :value="amount(store.cashflow.afterBillsCents)" detail="Available less unpaid commitments" emphasis :negative="(store.cashflow.afterBillsCents ?? 0) < 0" />
     <MetricCard label="Income received" :value="formatMoney(store.cashflow.receivedCents)" detail="Recorded deposits dated through today" />
     <MetricCard label="Still committed" :value="formatMoney(store.cashflow.outstandingCents)" detail="Remaining bill amounts this month" />
   </div>
-  <div class="cashflow-context"><p class="fine-print">{{ store.month }} · Expected income {{ formatMoney(income) }} · Recorded outflow to date {{ formatMoney(store.cashflow.spentCents) }}. Tracked estimates depend on your entries; Accrynt does not connect to a bank.</p><button class="text-link" @click="editOpening">{{ store.monthData?.openingCents == null ? 'Set opening balance' : 'Edit opening balance' }}</button></div>
-  <section v-if="openingEditor" class="panel inline-editor"><h2>Opening balance · {{ store.month }}-01</h2><p class="body-copy">Money on hand at the start of this month across the accounts you track. Record this month’s deposits separately in the Ledger. This amount is never carried into another month automatically.</p><form class="inline-form" @submit.prevent="saveOpening()"><label>Opening balance (USD)<input v-model="openingDraft" inputmode="decimal" required /></label><button class="button primary" :disabled="busy">Save opening balance</button><button type="button" class="button" :disabled="busy" @click="saveOpening(true)">Clear balance</button><button type="button" class="button" :disabled="busy" @click="openingEditor = false">Cancel</button></form></section>
+  <div class="cashflow-context"><p class="fine-print">{{ store.month }} · Expected income {{ formatMoney(income) }} · Recorded outflow to date {{ formatMoney(store.cashflow.spentCents) }}. Tracked estimates depend on your entries; Accrynt does not connect to a bank.</p><button class="text-link" @click="!openingEditor && editOpening()" :disabled="openingEditor">{{ store.monthData?.openingCents == null ? 'Set opening balance' : 'Edit opening balance' }}</button></div>
+  <section v-if="openingEditor" class="panel inline-editor"><h2>Opening balance · {{ store.month }}-01</h2><p class="body-copy">Money on hand at the start of this month across the accounts you track. Record this month’s deposits separately in the Ledger. This amount is never carried into another month automatically.</p><div v-if="suggestion" class="opening-suggestion"><p class="body-copy">Prior recorded closing · {{ suggestion.source }} · <strong class="mono">{{ formatMoney(suggestion.cents) }}</strong>. Based only on the opening cash and dated Ledger entries saved for that completed month. Records may be incomplete. Later historical edits will not update this opening automatically.</p><button class="button small" type="button" :disabled="busy" @click="openingDraft = (suggestion.cents / 100).toFixed(2)">Use prior recorded closing</button><p class="form-hint">Review the amount, then Save opening balance to accept it.</p></div><form class="inline-form" @submit.prevent="saveOpening()"><fieldset class="editor-fields inline-fields" :disabled="busy"><label>Opening balance (USD)<input v-model="openingDraft" inputmode="decimal" required /></label><button class="button primary" :disabled="busy">Save opening balance</button><button type="button" class="button" :disabled="busy" @click="saveOpening(true)">Clear balance</button><button type="button" class="button" :disabled="busy" @click="draftGuard.close()">Cancel</button></fieldset></form></section>
   <p v-if="store.monthData?.openingCents == null" class="body-copy">Set an opening balance to calculate tracked available money. Expected income is kept separate until received.</p>
   <div class="dashboard-grid focus-dashboard">
     <section class="panel">

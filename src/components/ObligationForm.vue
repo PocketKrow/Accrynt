@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEditorDraft } from '../composables/editorDraft'
 import { errorMessage } from '../domain/errors'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useFinanceStore } from '../stores/finance'
@@ -47,11 +48,15 @@ async function submit() {
   } catch (e) { error.value = errorMessage(e, 'Unable to save obligation.') }
   finally { busy.value = false }
 }
+const draftGuard = useEditorDraft({
+  label: 'obligation', open: () => props.modelValue, draft: () => (form), busy,
+  save: () => submit(), close: () => { emit('update:modelValue', false) }, element: dialogElement
+})
 </script>
 <template>
-  <dialog ref="dialogElement" class="modal-panel native-dialog" @cancel="busy && $event.preventDefault()" :aria-label="heading" @close="emit('update:modelValue', false)">
-      <div class="modal-heading"><h2>{{ heading }}</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="emit('update:modelValue', false)">✕</button></div>
-      <form @submit.prevent="submit">
+  <dialog ref="dialogElement" class="modal-panel native-dialog" @cancel.prevent="draftGuard.close()" :aria-label="heading" @close="emit('update:modelValue', false)">
+      <div class="modal-heading"><h2>{{ heading }}</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="draftGuard.close()">✕</button></div>
+      <form @submit.prevent="submit"><fieldset class="editor-fields" :disabled="busy">
         <label>Obligation name<input v-model="form.name" required maxlength="100" autofocus placeholder="Internet, electricity, loan payment…" /></label>
         <label>Planned amount (USD)<input v-model="form.amount" required inputmode="decimal" placeholder="85.00" /></label>
         <label>Category<select v-model="form.category"><option v-for="category in categories" :key="category">{{ category }}</option></select></label>
@@ -61,7 +66,7 @@ async function submit() {
         </label>
         <p class="form-hint">This edits only this month’s bill. Use Record payment when money moves; the manual paid checkbox remains available for payments tracked elsewhere.</p>
         <p v-if="error" class="error-message" role="alert">{{ error }}</p>
-        <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="emit('update:modelValue', false)">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save obligation' }}</button></div>
-      </form>
+        <div class="modal-actions"><button type="button" class="button" :disabled="busy" @click="draftGuard.close()">Cancel</button><button class="button primary" :disabled="busy">{{ busy ? 'Saving…' : 'Save obligation' }}</button></div>
+      </fieldset></form>
   </dialog>
 </template>

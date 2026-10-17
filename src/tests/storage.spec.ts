@@ -238,9 +238,9 @@ describe('live workspace refresh', () => {
     const store = useFinanceStore(); store.month = '2026-12'; store.start()
     try {
       await vi.waitFor(() => expect(store.loaded).toBe(true))
-      await repo.saveIncome('2026-12', 12300)
+      await repo.saveIncome('2026-12', 12300, await db.months.get('2026-12') ?? null)
       await vi.waitFor(() => expect(store.monthData?.incomeCents).toBe(12300))
-      store.stop(); await repo.saveIncome('2026-12', 23400)
+      store.stop(); await repo.saveIncome('2026-12', 23400, await db.months.get('2026-12') ?? null)
       store.start()
       await vi.waitFor(() => expect(store.monthData?.incomeCents).toBe(23400))
     } finally { store.$dispose() }
