@@ -4,7 +4,7 @@ import { db, clearWorkspace, readWorkspace } from '../data/database'
 import { exportBackup, recoverySnapshot, restoreBackup, validateBackup } from '../data/backup'
 import { localRepository as repo } from '../data/repository'
 import { useFinanceStore } from '../stores/finance'
-import { localDate, newId, now } from '../domain/models'
+import { localDate, now } from '../domain/models'
 
 beforeEach(async () => { await db.open(); await clearWorkspace() })
 afterEach(async () => { vi.restoreAllMocks(); await clearWorkspace(); db.close() })
@@ -27,7 +27,6 @@ it('keeps live observation after recurrence failure, suppresses automatic retrie
   } finally { store.stop() }
 })
 it('rejects interest period and historical amount corruption while preserving reversed/deleted-debt history', async () => {
-  const id = newId()
   await repo.saveDebt({ name: 'Synthetic loan', balanceCents: 100000, startingBalanceCents: null, minimumCents: 10000, monthlyPaymentCents: null, aprMilliPercent: 18000, balanceAsOf: null, interestMethod: 'monthly' })
   const d = (await db.debts.toArray())[0], period = localDate().slice(0, 7)
   await repo.adjustDebt({ id: `interest:${d.id}:${period}`, debtId: d.id, expectedUpdatedAt: d.updatedAt, kind: 'interest', date: localDate(), amountCents: 1500, note: 'Synthetic interest', period })
@@ -39,7 +38,6 @@ it('rejects interest period and historical amount corruption while preserving re
   const valid = await exportBackup()
   await restoreBackup(valid)
   expect((await exportBackup()).balanceEvents[0].reversedAt).not.toBeNull()
-  expect(id).toBeTruthy()
 })
 it('reproduces a corrupt-state portable export failure and preserves raw rows for recovery and atomic repair', async () => {
   await db.months.add({ key: '2026-01', incomeCents: -1, openingCents: null, updatedAt: now() })

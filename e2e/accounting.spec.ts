@@ -60,7 +60,7 @@ test('original v3 import previews age and downloads current recovery data before
  await page.getByRole('button',{name:'Replace local records with backup'}).click()
  expect((await recovery).suggestedFilename()).toContain('DEMO-SYNTHETIC-Accrynt-before-restore')
  await page.goto('/?demo=1#/debts')
- const card=page.locator('.debt-card');await expect(card).toHaveCount(1);await expect(card).toContainText('Historical fixture loan');await expect(card.locator('.debt-balance')).toHaveText('$910.00');await expect(card).toContainText('12.000%')
+ const card=page.locator('.debt-card');await expect(card).toHaveCount(1);await expect(card).toContainText('Historical fixture loan');await expect(card.locator('.debt-balance')).toHaveText('$910.00');await expect(card).toContainText('12%')
 })
 test('known zero APR keeps suggesting zero on subsequent payments while unknown APR stays blank',async({page})=>{
  await page.clock.install({time:new Date('2026-10-16T16:00:00Z')});await page.goto('/?demo=1#/debts')

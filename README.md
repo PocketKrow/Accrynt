@@ -1,4 +1,4 @@
-# Accrynt · v0.5
+# Accrynt · v0.6
 
 A personal, local-first finance workspace built with **Vue 3 + Vite + TypeScript + SCSS + Pinia + Vue Router + Dexie/IndexedDB + Zod**. The Carbon × Glacier identity, full-viewport workspace, six sections, and right desktop rail are preserved. There is no account system or backend.
 
@@ -83,7 +83,7 @@ Payoff is a count of monthly payments, not a calendar date. Projections stop at 
 
 Records remain in IndexedDB **`accrynt-local-v1`**, now at Dexie schema version **4**. Its name is unchanged. The v4 upgrade preserves balances and receipt splits, converts legacy basis-point rates exactly (×10), adds unknown balance reference dates and creates a balance-event table. Historical Dexie versions 1–3 are unchanged. Stored data belongs to the exact origin and browser profile: domains, ports, `localhost`, `127.0.0.1`, and different browsers have separate stores. Only theme preference uses `localStorage`.
 
-**Settings → Download JSON backup** exports all seven tables using `accrynt-portable` schema **4**, including receipts, opening balances, rules, skipped entries, and monthly snapshots. Strict v1/v2/v3 backups remain supported with neutral defaults for new fields. Old app releases cannot restore v4 exports. Restore validates IDs, references, receipt arithmetic, and recurrence keys before atomic replacement. The file picker has a 15 MB limit. Backups are unencrypted.
+**Settings → Download JSON backup** exports all seven tables using `accrynt-portable` schema **5**, including receipts, opening balances, rules, skipped entries, and monthly snapshots. Strict v1/v2/v3/v4 backups remain supported with neutral defaults for new fields. Old app releases cannot restore v5 exports. Restore validates IDs, references, receipt arithmetic, and recurrence keys before atomic replacement. The file picker has a 15 MB limit. Backups are unencrypted.
 
 Browser data clearing, profile removal, or eviction can remove records. Persistent-storage permission may be declined and does not replace external backups. A storage error offers Retry without clearing records. Selected month starts at the current month on launch; historical plans remain accessible. Optional historical example data loads only on request into a completely empty workspace.
 
@@ -114,6 +114,20 @@ Set a balance reference date and estimate method in the debt editor for automati
 
 Changing a balance/reference date in the debt editor also records a statement event. **Balance adjustment history** reverses only the latest active event when its after-balance still matches. Reversal history is retained; a reversed interest period cannot be posted again—use an actual statement adjustment for corrections. Payments recorded after posted interest suggest the already-in-balance option and only the unallocated posted amount. Subsequent payments without an explicit posting require manual interest review rather than assuming another full monthly charge.
 
-Restore previews record counts, provenance and export age, warns when newer local records exist, and downloads a current safety snapshot before replacement or clearing. Keep that file outside the browser. v1–v3 imports remain supported; new v4 exports require the updated app. Database upgrades are forward-only: export a backup before upgrading, and use the updated app for recovery rather than opening a migrated profile in an older release. See [accounting contract](docs/ADR-0001-debt-accounting.md) and [implementation review](docs/IMPLEMENTATION-REVIEW.md).
+Restore previews record counts, provenance and export age, warns when newer local records exist, and initiates a current recovery download before replacement or clearing. Keep that file outside the browser. v1–v4 imports remain supported; new v5 exports require the updated app. Database upgrades are forward-only: export a backup before upgrading, and use the updated app for recovery rather than opening a migrated profile in an older release. See [accounting contract](docs/ADR-0001-debt-accounting.md) and [implementation review](docs/IMPLEMENTATION-REVIEW.md).
 
 **Reports → Export report CSV** exports the selected 3/6/12-month view. Unknown values remain blank. See [v0.5 verification](docs/QA-v0.5.md) for the migration fixtures, responsive matrix and browser evidence.
+
+## Production continuation
+
+Scheduled income now shows received/partial/remaining totals derived from explicitly linked Ledger deposits. Record receipt selects its plan entry; use Ledger → Edit → Scheduled income link to reconcile existing deposits. Generic income stays unlinked until selected. Partial, multiple and extra receipts are supported; future-dated deposits stay scheduled. Skipping a plan does not delete receipts. Receiving income never changes expected income. Edit additional income changes only the additional part of the plan.
+
+Native Dexie remains v4 with an optional transaction link and no automatic record rewrite. Portable v5 preserves links; v1–v4 imports remain supported. Older builds must not edit linked records; preserve a pre-update export for rollback. See [ADR 0002](docs/ADR-0002-income-receipts.md).
+
+A recurring-generation error keeps the Ledger live and flags incomplete plan totals until explicit retry. Invalid current data can be preserved as a clearly labelled raw recovery file; this is not an importable portable backup and requires manual repair. Recovery downloads are initiated, not guaranteed saved to disk. Cross-workspace restore warns before replacing personal/demo data.
+
+Payment forms show prior-cycle posted interest, allocation context and reference-date changes. Later statement/refund events make allocation uncertain and require manual review. All splits remain user-confirmed. Direct balance edits retain the chosen date and now show a warning when it is unchanged. No estimates are automatically posted.
+
+Overview shows capped-list scope and separates other-month upcoming items. Ledger marks scheduled rows, Reports aligns category tracks and marks partial months, paid-off debts are compact, and both font families are locally bundled with licenses and precached offline. These presentation changes do not alter saved descriptions, balances or receipts. New synthetic demo seeds use explicit income links; existing demo records are not silently relinked.
+
+Review and validation for this continuation are in [QA production continuation](docs/QA-production-continuation.md).

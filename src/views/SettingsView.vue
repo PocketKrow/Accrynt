@@ -132,7 +132,7 @@ async function clearAll() {
       <div class="setting-row"><div><strong>Storage engine</strong><p>IndexedDB via Dexie. No account, server, banking connection, or cloud sync.</p></div><span class="status-pill">LOCAL</span></div>
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">YOUR RECORDS</span><h2>Backup & restore</h2></div></div>
-      <p class="body-copy">Export a portable v4 JSON archive. This version requires the updated app; older app versions cannot read v4 exports. Imports from v1–v3 remain supported. Save it somewhere outside this browser. Restore replaces all records only after validation and explicit confirmation.</p>
+      <p class="body-copy">Export a portable v5 JSON archive. This version requires the updated app; older app versions cannot read v5 exports. Imports from v1–v4 remain supported. Save it somewhere outside this browser. Restore replaces all records only after validation and explicit confirmation.</p>
       <div class="data-counts"><span>{{ rowCounts.months }} months</span><span>{{ rowCounts.obligations }} obligations</span><span>{{ rowCounts.transactions }} transactions</span><span>{{ rowCounts.debts }} debts</span><span>{{ rowCounts.recurringRules }} recurring rules</span><span>{{ rowCounts.recurringOccurrences }} recurring entries</span></div>
       <button class="button primary" :disabled="busy" @click="exportData">Download JSON backup</button>
       <details class="details-panel"><summary>Recovery for damaged records</summary><p class="body-copy">If portable validation fails, preserve an unvalidated raw copy for manual repair. Raw recovery files cannot be imported directly.</p><button class="button" :disabled="busy" @click="exportRecovery">Download recovery data</button></details>
@@ -151,10 +151,10 @@ async function clearAll() {
       <div class="setting-row"><div><strong>Persistent storage</strong><p>{{ requestingPersistence ? 'Waiting for your browser’s permission decision' : persisted === true ? 'Granted' : persisted === false ? 'Not granted' : 'Not checked' }}. A request may be declined by the browser.</p></div><button class="button small" :disabled="requestingPersistence" @click="requestPersistence">{{ requestingPersistence ? 'Waiting…' : 'Request' }}</button></div>
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">WORKSPACE TOOLS</span><h2>Local controls</h2></div></div>
-      <p class="body-copy">Use Try demo for a fully interactive synthetic workspace. The small selected-month example adds fictional bills. It can only be added to an entirely empty workspace and never loads automatically.</p>
+      <p v-if="isDemo" class="body-copy">This synthetic workspace uses the same local workflows. Use Reset demo above to reload a scenario or Return to my workspace to leave the sandbox.</p><p v-else class="body-copy">Use Try demo for a fully interactive synthetic workspace. The small selected-month example adds fictional bills. It can only be added to an entirely empty workspace and never loads automatically.</p>
       <a v-if="!isDemo" class="button" :href="workspaceUrl(true)">Try demo</a>
       <button v-if="!store.hasAnyData" class="button" :disabled="busy" @click="loadSample">Load selected-month example</button>
-      <p v-else class="muted small-text">Example import is disabled because this workspace already has data.</p>
+      <p v-else-if="!isDemo" class="muted small-text">Example import is disabled because this workspace already has data.</p>
       <hr class="section-divider"/>
       <p class="body-copy">A current downloadable safety snapshot is prepared before deletion. Permanent deletion affects only the current browser's Accrynt database; existing downloaded backups are unaffected.</p>
       <button class="button danger-button" :disabled="busy || !store.hasAnyData" @click="clearAll">Delete all local records</button>

@@ -54,7 +54,7 @@ export function demoFixture(reference = localDate(), scenario: DemoScenario = 's
       const date = dueDate(key, rule.dueDay!)
       if (rule.kind === 'income') {
         if (date <= reference) data.transactions.push({ id: id(sequence++), date, name: rule.name, kind: 'income', category: 'Other', amountCents: rule.amountCents,
-          account: 'Synthetic checking', obligationId: null, payment: null, updatedAt: stamp })
+          account: 'Synthetic checking', obligationId: null, incomeOccurrenceId: occurrence.id, payment: null, updatedAt: stamp })
         continue
       }
       const manualPaid = rule.category === 'Insurance' && date <= reference
