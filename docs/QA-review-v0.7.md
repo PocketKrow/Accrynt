@@ -1,5 +1,7 @@
 # Accrynt v0.7 — review decisions and verification
 
+This records the initial v0.7 review. The subsequent UI/performance pass is documented in [UI polish verification](QA-ui-polish.md), which supersedes the earlier presentation measurements and decision to defer grouped status calculations.
+
 This change uses the supplied Step 5 code overview, DeepSeek code overview and Gemini desktop UX review. Those reviews were advisory: findings were checked against the actual source and browser before changes were made. The earlier production-continuation handoff remains the compatibility contract. The approved Carbon × Glacier identity, full viewport, right navigation, six routes and existing stack are retained. Mobile redesign remains deferred; existing responsive behavior is regression-tested.
 
 ## Integration

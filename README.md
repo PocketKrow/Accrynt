@@ -41,6 +41,14 @@ Playwright may need system libraries. Its `install --with-deps` option supports 
 
 This main-targeted continuation includes the previously reviewed v0.6 work. Publishing the PR does not itself update main or deploy the app. See [v0.7 review decisions and verification](docs/QA-review-v0.7.md).
 
+## UI polish and large-workspace responsiveness
+
+Header actions stay grouped beside the month selector. Shared text, table, form and definition-list styles use consistent spacing and weights. Settings panels stack by content; debt actions and Plan utilities align. Light/dark colors and the right navigation remain the approved design.
+
+Ledger displays 50 matching entries per page. Search, type/month filters and CSV export cover the complete matching set; the page counter makes the visible range explicit. Filtering resets the page, and changing pages clears a hidden inspector selection. Financial metrics still describe the full selected month.
+
+Payment status is derived once per live snapshot, currency/month formatters are reused, and all-time Ledger sorting is cached independently of search input. These caches are in memory and do not change records. Unused font weights are omitted from the offline cache. See [UI polish verification](docs/QA-ui-polish.md) for exact tests, limits, screenshot evidence and a reproducible calculation benchmark.
+
 ## What v0.4 adds
 
 - **Record payment once:** review the amount and interest/principal split, then confirm one Ledger entry, a debt balance update, and the linked bill's resulting payment status.
