@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-async function fixed(page: Page) { await page.clock.install({ time: new Date('2026-10-16T16:00:00Z') }) }
+async function fixed(page: Page) { await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z')) }
 async function addIncome(page: Page) {
   await page.getByText('Recurring bills & income · 0 active', { exact: true }).click()
   await page.getByRole('button', { name: '+ Add recurring item' }).click()
@@ -99,7 +99,8 @@ test('damaged current state yields labelled raw recovery before confirmed repair
 test('overflow scope, aligned report tracks and local fonts remain usable offline', async ({ page }) => {
   await fixed(page); await page.goto('/?demo=1#/')
   await expect(page.getByText('Showing 6 of 7 outstanding', { exact: false })).toBeVisible()
-  await expect(page.getByRole('heading', { name:'Other months · upcoming saved obligations' })).toBeVisible()
+  await expect(page.getByRole('heading', { name:'Other months · upcoming saved obligations' })).not.toBeVisible()
+  await expect(page.getByText('No upcoming obligations saved for other months.', { exact:true })).toBeVisible()
   await page.goto('/?demo=1#/reports')
   await page.evaluate(() => document.fonts.ready)
   expect(await page.evaluate(() => [...document.fonts].some(f=>f.family === 'Inter' && f.status === 'loaded'))).toBe(true)

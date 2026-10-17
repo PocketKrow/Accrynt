@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 test('exact 6.125% persists and dated estimates never change the saved balance', async({page})=>{
- await page.clock.install({time:new Date('2026-10-16T16:00:00Z')})
+ await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
  await page.goto('/?demo=1#/debts')
  const card=page.locator('.debt-card').filter({has:page.getByRole('heading',{name:'Fictional vehicle loan',exact:true})})
  await expect(card).toContainText('6.125%');await expect(card).toContainText('$43.26')
@@ -12,12 +12,13 @@ test('exact 6.125% persists and dated estimates never change the saved balance',
  await dialog.getByLabel('Interest estimate method').selectOption('daily-365')
  await dialog.getByRole('button',{name:'Save debt'}).click()
  await expect(dialog).not.toBeVisible();await expect(card.locator('.debt-balance')).toHaveText('$8,475.00')
+ await card.locator('.accrual-estimate summary').click()
  await expect(card.getByRole('region',{name:'Date-aware debt estimate'})).toContainText('$42.67')
  await page.reload();await expect(card.locator('.debt-balance')).toHaveText('$8,475.00')
  await expect(card).toContainText('6.125%')
 })
 test('posted interest is explicit, payment allocation uses it once, reversal follows balance order',async({page})=>{
- await page.clock.install({time:new Date('2026-10-16T16:00:00Z')})
+ await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
  await page.goto('/?demo=1#/debts')
  const card=page.locator('.debt-card').filter({has:page.getByRole('heading',{name:'Fictional personal loan',exact:true})})
  await card.getByRole('button',{name:'Adjust balance',exact:true}).click()
@@ -50,12 +51,13 @@ test('posted interest is explicit, payment allocation uses it once, reversal fol
  await adjust.getByRole('button',{name:'Confirm balance adjustment'}).click();await expect(adjust.getByRole('alert')).toContainText('already used')
 })
 test('original v3 import previews age and downloads current recovery data before replacing demo records',async({page})=>{
- await page.clock.install({time:new Date('2026-10-16T20:00:00Z')})
+ await page.clock.setFixedTime(new Date('2026-10-16T20:00:00Z'))
  await page.goto('/?demo=1#/settings')
  const original=JSON.parse(readFileSync(new URL('../src/tests/fixtures/v3-original-export.json',import.meta.url),'utf8'))
  original.exportedAt='2026-01-01T00:00:00.000Z'
  await page.getByLabel('Select an Accrynt backup file').setInputFiles({name:'legacy-v3.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(original))})
  await expect(page.getByText('Validated backup:',{exact:false})).toBeVisible();await expect(page.getByRole('alert').filter({hasText:'newer records'})).toBeVisible()
+ await expect(page.getByRole('alert').filter({hasText:'Cross-workspace restore'})).toBeVisible()
  const recovery=page.waitForEvent('download');page.once('dialog',d=>d.accept())
  await page.getByRole('button',{name:'Replace local records with backup'}).click()
  expect((await recovery).suggestedFilename()).toContain('DEMO-SYNTHETIC-Accrynt-before-restore')
@@ -63,7 +65,7 @@ test('original v3 import previews age and downloads current recovery data before
  const card=page.locator('.debt-card');await expect(card).toHaveCount(1);await expect(card).toContainText('Historical fixture loan');await expect(card.locator('.debt-balance')).toHaveText('$910.00');await expect(card).toContainText('12%')
 })
 test('known zero APR keeps suggesting zero on subsequent payments while unknown APR stays blank',async({page})=>{
- await page.clock.install({time:new Date('2026-10-16T16:00:00Z')});await page.goto('/?demo=1#/debts')
+ await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'));await page.goto('/?demo=1#/debts')
  const zero=page.locator('.debt-card').filter({has:page.getByRole('heading',{name:'Fictional promotion · 0%',exact:true})})
  const dialog=page.getByRole('dialog',{name:'Record payment',exact:true})
  await zero.getByRole('button',{name:'Record payment',exact:true}).click();await expect(dialog.getByLabel('Interest included in payment (USD)')).toHaveValue('0.00')

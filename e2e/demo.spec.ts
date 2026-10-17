@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-async function freeze(page: Page) { await page.clock.install({ time: new Date('2026-10-16T16:00:00Z') }) }
+async function freeze(page: Page) { await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z')) }
 async function ready(page: Page) { await expect(page.locator('h1')).toBeVisible(); await expect(page.getByText('Opening local workspace…')).not.toBeVisible() }
 async function snapshot(page: Page, name: string) {
   return page.evaluate(async dbName => {

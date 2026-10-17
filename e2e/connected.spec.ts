@@ -28,7 +28,7 @@ async function backup(page: Page) {
   for await (const chunk of stream) chunks.push(Buffer.from(chunk))
   return JSON.parse(Buffer.concat(chunks).toString('utf8'))
 }
-async function fixedDate(page: Page) { await page.clock.install({ time: new Date('2026-10-16T12:00:00Z') }) }
+async function fixedDate(page: Page) { await page.clock.setFixedTime(new Date('2026-10-16T12:00:00Z')) }
 async function pay(page: Page, amount: string, interest: string) {
   const dialog = page.getByRole('dialog', { name: 'Record payment', exact: true })
   await dialog.getByLabel('Payment amount (USD)').fill(amount)

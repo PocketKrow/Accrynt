@@ -8,7 +8,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
   reporter: [['list'], ['html', { open: 'never' }]],
-  use: { baseURL: 'http://127.0.0.1:4173', trace: 'retain-on-failure' },
+  // Date-only accounting fixtures must not inherit the host browser's timezone.
+  use: { baseURL: 'http://127.0.0.1:4173', trace: 'retain-on-failure', timezoneId:'UTC', locale:'en-US' },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'],
       launchOptions: process.env.ACCRYNT_CHROMIUM_PATH ? {

@@ -292,4 +292,27 @@ input,select{min-width:0}
 .details-panel{margin-top:16px}.details-panel summary{cursor:pointer;color:var(--accent);font-size:12px;padding:8px 0}
 @media(max-width:395px){.category-breakdown{column-gap:7px;grid-template-columns:minmax(70px,.8fr) minmax(20px,1fr) max-content}.report-controls{align-items:flex-start}}
 .panel-heading>div{min-width:0}.panel-heading h2{overflow-wrap:anywhere}
+
+/* Review refinements: clear period labels and compact, explicit debt assumptions. */
+.data-table th .cell-sub{display:block;color:var(--muted);font-size:11px;font-weight:400;line-height:1.6;margin-top:4px;text-transform:none;white-space:normal}
+.history-panel .data-table tbody th{vertical-align:top}
+.trend-month.is-partial .trend-actual{background:repeating-linear-gradient(135deg,var(--accent) 0 5px,var(--surface) 5px 7px);outline:1px solid var(--accent);outline-offset:-1px}
+.chart-period-label{display:block;font-size:10px;line-height:1.4;margin-top:3px;color:var(--accent);font-weight:750}
+.metric-actions{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:8px}
+.expected-income-panel:focus{outline:2px solid var(--accent);outline-offset:3px}
+.rail-metric-label{font-size:11px;line-height:1.5;color:var(--rail-muted);margin-top:12px}
+.rail-metric-label+.rail-metric{margin-top:7px}
+.preparing-plan{padding:10px 12px;border:1px solid var(--line);font-size:12px;color:var(--muted);background:var(--surface)}
+.storage-recovery{border-top:1px solid var(--line);margin-top:16px;padding-top:12px;font-size:12px;line-height:1.6}
+.debt-card .debt-summary-facts{margin:14px 0;gap:8px}
+.debt-card .accrual-estimate{margin-top:12px;padding-top:10px}
+.debt-assumptions{font-size:11px;line-height:1.6;color:var(--muted);margin:0 0 6px}
+.accrual-estimate summary,.historical-terms summary{cursor:pointer;color:var(--accent);font-size:11px;line-height:1.6;padding:5px 0;overflow-wrap:anywhere}
+.accrual-estimate summary strong{margin-left:6px}
+.accrual-estimate .debt-facts,.historical-terms .debt-facts{margin:12px 0}
+.historical-terms dd{margin:0}
+.debt-card .debt-forecast{padding-top:12px;margin:12px 0}
+.debt-card .forecast-stats{margin:10px 0;gap:10px}
+.debt-card .forecast-stats .forecast-payoff{grid-column:auto}
+.debt-card .balance-history{margin:10px 0}
 .setting-row>div{min-width:0}.setting-row select{flex:0 0 auto;min-width:88px}

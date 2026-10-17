@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 test('responsive demo workbench uses the viewport at 320 through 3840 and captures all routes in both themes', async ({ page }, info) => {
   test.setTimeout(120000)
-  await page.clock.install({ time: new Date('2026-10-16T16:00:00Z') })
+  await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
   await page.goto('/?demo=1#/')
   await expect(page.locator('h1')).toBeVisible()
   for (const theme of ['light','dark']) {
@@ -29,7 +29,7 @@ test('responsive demo workbench uses the viewport at 320 through 3840 and captur
   }
 })
 test('ledger inspector, all-time search, safe CSV and unknown history are functional', async ({ page }) => {
-  await page.clock.install({ time: new Date('2026-10-16T16:00:00Z') })
+  await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
   await page.goto('/?demo=1#/ledger')
   await page.getByLabel('Ledger period').selectOption('all')
   await page.getByLabel('Search transactions').fill('Synthetic partial card payment')
@@ -46,7 +46,7 @@ test('ledger inspector, all-time search, safe CSV and unknown history are functi
   const report=page.waitForEvent('download');await page.getByRole('button',{name:'Export report CSV',exact:true}).click();expect((await report).suggestedFilename()).toContain('DEMO-SYNTHETIC-Accrynt-report-2026-10.csv')
 })
 test('populated layout supports 200% CSS zoom and the February scenario opens February with month-end dates', async ({ page }) => {
-  await page.clock.install({ time: new Date('2026-10-16T16:00:00Z') })
+  await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
   await page.setViewportSize({ width:1280,height:1000 }); await page.goto('/?demo=1#/plan')
   await expect(page.locator('h1')).toBeVisible()
   await page.evaluate(()=>{document.body.style.zoom='2'})
