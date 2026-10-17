@@ -191,6 +191,9 @@ test('actual non-ASCII exported artifact above 15 MB restores through the file i
   await expect(page.locator('.data-counts')).toContainText('24000 transactions')
   page.once('dialog', d => d.accept())
   await page.getByRole('button', { name: 'Replace local records with backup' }).click()
+  // Firefox CI can take over five seconds to finish an atomic 24,000-row restore.
+  // Wait for the operation to settle, then still verify successful completion/data.
+  await expect(page.getByRole('button', { name: 'Download JSON backup', exact: true })).toBeEnabled({ timeout: 30_000 })
   await expect(page.getByText('Validated backup:', { exact: false })).not.toBeVisible()
   expect(JSON.parse((await download(page)).toString('utf8')).transactions).toEqual(data.transactions)
   await input.setInputFiles({ name: 'broken.json', mimeType: 'application/json', buffer: Buffer.from('{invalid') })
