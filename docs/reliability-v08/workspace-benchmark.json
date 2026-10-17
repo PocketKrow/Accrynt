@@ -1,0 +1,23 @@
+{
+  "synthetic": {
+    "months": 72,
+    "obligations": 3600,
+    "transactions": 24000
+  },
+  "viewport": "1920×1080",
+  "browser": "153.0.8010.0",
+  "startupMs": [
+    340,
+    325,
+    320,
+    317,
+    352
+  ],
+  "saveToRenderMs": [
+    277,
+    286,
+    271,
+    292,
+    375
+  ]
+}
