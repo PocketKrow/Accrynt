@@ -58,7 +58,8 @@ const legacyPaymentReceiptSchema = z.object({
 export const paymentReceiptSchema = legacyPaymentReceiptSchema.extend({
   balanceAsOfBefore: date.nullable().default(null), balanceAsOfAfter: date.nullable().default(null)
 })
-export const transactionSchema = legacyTransactionSchema.extend({ payment: paymentReceiptSchema.nullable() })
+const v4TransactionSchema = legacyTransactionSchema.extend({ payment: paymentReceiptSchema.nullable() })
+export const transactionSchema = v4TransactionSchema.extend({ incomeOccurrenceId: z.string().min(1).max(100).nullable().optional() })
 export type Transaction = z.infer<typeof transactionSchema>
 
 export const legacyDebtSchema = z.object({
@@ -128,11 +129,12 @@ const v3BackupSchema = v2BackupSchema.extend({
   recurringRules: z.array(recurringRuleSchema).max(10_000),
   recurringOccurrences: z.array(recurringOccurrenceSchema).max(100_000)
 })
-export const backupSchema = v3BackupSchema.extend({
+const v4BackupSchema = v3BackupSchema.extend({
   schemaVersion: z.literal(4), workspace: z.enum(['personal', 'demo-synthetic']),
-  debts: z.array(debtSchema).max(10_000), transactions: z.array(transactionSchema).max(200_000),
+  debts: z.array(debtSchema).max(10_000), transactions: z.array(v4TransactionSchema).max(200_000),
   balanceEvents: z.array(balanceEventSchema).max(100_000)
 })
+export const backupSchema = v4BackupSchema.extend({ schemaVersion: z.literal(5), transactions: z.array(transactionSchema).max(200_000) })
 export type Backup = z.infer<typeof backupSchema>
 
 // V1 exports predate saved payment plans. Strict validation still applies before migration.
@@ -140,11 +142,12 @@ const legacyBackupSchema = v2BackupSchema.extend({
   schemaVersion: z.literal(1),
   debts: z.array(legacyDebtSchema.omit({ monthlyPaymentCents: true })).max(10_000)
 })
-export const portableBackupSchema = z.union([backupSchema, v3BackupSchema, v2BackupSchema, legacyBackupSchema]).transform((data): Backup => {
-  if (data.schemaVersion === 4) return data
-  return { ...data, schemaVersion: 4, workspace: 'personal', balanceEvents: [],
+export const portableBackupSchema = z.union([backupSchema, v4BackupSchema, v3BackupSchema, v2BackupSchema, legacyBackupSchema]).transform((data): Backup => {
+  if (data.schemaVersion === 5) return data
+  if (data.schemaVersion === 4) return { ...data, schemaVersion: 5, transactions: data.transactions.map(row => ({ ...row, incomeOccurrenceId: null })) }
+  return { ...data, schemaVersion: 5, workspace: 'personal', balanceEvents: [],
     months: data.months.map(month => ({ ...month, openingCents: 'openingCents' in month ? month.openingCents : null })),
-    transactions: data.transactions.map(row => transactionSchema.parse({ ...row, payment: 'payment' in row ? row.payment : null })),
+    transactions: data.transactions.map(row => transactionSchema.parse({ ...row, incomeOccurrenceId: null, payment: 'payment' in row ? row.payment : null })),
     debts: data.debts.map(debt => migrateLegacyDebt({ ...debt, monthlyPaymentCents: 'monthlyPaymentCents' in debt ? debt.monthlyPaymentCents : null })),
     recurringRules: 'recurringRules' in data ? data.recurringRules : [], recurringOccurrences: 'recurringOccurrences' in data ? data.recurringOccurrences : [] }
 })

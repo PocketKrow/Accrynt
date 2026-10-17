@@ -75,7 +75,7 @@ test('one payment updates principal, partial bill status, cashflow, and Ledger; 
   await expect(second).not.toBeVisible()
   await page.goto('/#/plan'); await expect(row).toContainText('Partial')
   const exported = await backup(page)
-  expect(exported.schemaVersion).toBe(4)
+  expect(exported.schemaVersion).toBe(5)
   expect(exported.debts[0].balanceCents).toBe(91000)
   expect(exported.months[0].openingCents).toBe(100000)
   expect(exported.transactions).toHaveLength(2)

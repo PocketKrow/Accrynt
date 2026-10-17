@@ -13,6 +13,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 const store = useFinanceStore()
 const busy = ref(false), error = ref('')
 const form = reactive({ name: '', balance: '', starting: '', minimum: '', apr: '', payment: '', asOf: '', method: 'monthly' as Debt['interestMethod'] })
+const retainedDate = computed(() => props.record && parseMoney(form.balance) !== props.record.balanceCents && (form.asOf || null) === props.record.balanceAsOf)
 const calculation = computed(() => {
   const balanceCents = parseMoney(form.balance), minimumCents = parseMoney(form.minimum)
   const monthlyPaymentCents = form.payment.trim() === '' ? null : parseMoney(form.payment)
@@ -60,6 +61,7 @@ async function submit() {
         <label>Name<input v-model="form.name" required maxlength="100" placeholder="Personal loan, credit card…" /></label>
         <label>Current balance (USD)<input v-model="form.balance" required inputmode="decimal" placeholder="1500.00" /></label>
         <label>Balance as of date (optional)<input v-model="form.asOf" type="date" /></label>
+        <p v-if="retainedDate" class="form-hint">The balance changed while its reference date stays {{ record?.balanceAsOf ?? 'unknown' }}. Dated estimates continue from that date. Update the date if this balance belongs to a newer statement.</p>
         <label>Interest estimate method<select v-model="form.method"><option value="monthly">Nominal monthly · APR ÷ 12</option><option value="daily-365">Simple daily · 365 days</option><option value="daily-360">Simple daily · 360 days</option></select></label>
         <label>Starting balance (optional)<input v-model="form.starting" inputmode="decimal" placeholder="2500.00" /></label>
         <label>Minimum payment (USD)<input v-model="form.minimum" required inputmode="decimal" placeholder="45.00" /></label>

@@ -27,12 +27,16 @@ export const useFinanceStore = defineStore('finance', () => {
   const loaded = ref(false)
   const error = ref('')
   const notice = ref(''), operationError = ref('')
+  const recurringFailures = ref<Record<string, string>>({})
+  const preparingMonth = ref('')
+  const recurrenceWarning = computed(() => recurringFailures.value[month.value] ?? '')
+  const planIncomplete = computed(() => !!recurrenceWarning.value || preparingMonth.value === month.value)
   let subscription: { unsubscribe(): void } | null = null
   let clock: ReturnType<typeof setInterval> | null = null
 
   const monthData = computed(() => months.value.find(m => m.key === month.value))
   const monthObligations = computed(() => obligations.value.filter(o => o.month === month.value)
-    .slice().sort((a, b) => (a.dueDay ?? 32) - (b.dueDay ?? 32) || a.name.localeCompare(b.name)))
+    .slice().sort((a, b) => (a.dueDay ?? 32) - (b.dueDay ?? 32) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)))
   const monthTransactions = computed(() => transactions.value.filter(t => t.date.slice(0, 7) === month.value)
     .slice().sort(compareTransactions))
   const expectedOccurrences = computed(() => recurringOccurrences.value.filter(o => o.month === month.value && o.kind === 'income'))
@@ -42,17 +46,26 @@ export const useFinanceStore = defineStore('finance', () => {
   const hasAnyData = computed(() => months.value.length + obligations.value.length + transactions.value.length + debts.value.length + recurringRules.value.length + balanceEvents.value.length > 0)
   let generating = false, requested = false
   let initialization: Promise<void> | null = null
-  async function generateMonth() {
+  async function generateMonth(retry = false) {
+    if (retry) delete recurringFailures.value[month.value]
+    if (recurringFailures.value[month.value]) return
     if (!subscription || !recurringRules.value.length) return
     requested = true
     if (generating) return
     generating = true
     try {
-      while (requested && subscription) { requested = false; await localRepository.ensureRecurringMonth(month.value) }
-    } catch (reason) {
-      error.value = reason instanceof Error ? reason.message : 'Unable to prepare recurring items.'
-      stop()
-    } finally { generating = false }
+      while (requested && subscription) {
+        requested = false
+        const target = month.value
+        if (recurringFailures.value[target]) continue
+        preparingMonth.value = target
+        try {
+          await localRepository.ensureRecurringMonth(target)
+        } catch (reason) {
+          recurringFailures.value[target] = reason instanceof Error ? reason.message : 'Unable to prepare recurring items.'
+        }
+      }
+    } finally { generating = false; preparingMonth.value = '' }
   }
   watch(month, () => { void generateMonth() })
 
@@ -103,6 +116,6 @@ export const useFinanceStore = defineStore('finance', () => {
   return {
     months, obligations, transactions, debts, balanceEvents, recurringRules, recurringOccurrences, month, today, theme, loaded, error, notice, operationError, fail, dismissError,
     monthData, monthObligations, monthTransactions, expectedOccurrences, expectedIncomeCents, summary, cashflow, hasAnyData,
-    start, stop, setTheme, notify, clearNotice
+    recurrenceWarning, planIncomplete, retryRecurrence: () => generateMonth(true), start, stop, setTheme, notify, clearNotice
   }
 })
