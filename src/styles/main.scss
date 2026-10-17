@@ -1,3 +1,14 @@
+@font-face{font-family:"Inter";font-style:normal;font-weight:400;font-display:swap;src:url("/fonts/inter-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:500;font-display:swap;src:url("/fonts/inter-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:600;font-display:swap;src:url("/fonts/inter-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:700;font-display:swap;src:url("/fonts/inter-latin-700-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:800;font-display:swap;src:url("/fonts/inter-latin-800-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:900;font-display:swap;src:url("/fonts/inter-latin-900-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:400;font-display:swap;src:url("/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:500;font-display:swap;src:url("/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:600;font-display:swap;src:url("/fonts/jetbrains-mono-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:700;font-display:swap;src:url("/fonts/jetbrains-mono-latin-700-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:800;font-display:swap;src:url("/fonts/jetbrains-mono-latin-800-normal.woff2") format("woff2")}
 :root{font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;font-size:14px;font-synthesis:none;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 *{box-sizing:border-box}
 html{min-width:320px}
@@ -266,3 +277,19 @@ input,select{min-width:0}
 .eyebrow,.metric-label,.rail-heading,.rail-section-label,.rail-footer,.nav-index{font-size:10px}
 .fine-print,.form-hint,.cell-sub,.activity-row small,.bill-name small{font-size:11px;line-height:1.6}
 @media(max-width:720px){.button,.icon-button,.row-actions button{min-height:44px}.row-actions{gap:4px 12px}}
+
+/* Shared category columns keep every track aligned, including large amounts. */
+.category-breakdown{grid-template-columns:minmax(88px,.8fr) minmax(28px,1fr) max-content;column-gap:12px}
+.category-breakdown>.breakdown-row{grid-template-columns:subgrid;grid-column:1/-1;min-width:0}
+.category-breakdown>.empty-copy{grid-column:1/-1}
+.breakdown-row>span{overflow-wrap:anywhere}
+.report-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.history-panel .panel-heading{flex-wrap:wrap}.trend-chart{height:180px}
+.scheduled-marker{color:var(--accent)!important}
+.file-label input{padding:10px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);min-width:0}
+.file-label input::file-selector-button{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font:inherit;padding:8px;margin-right:10px;cursor:pointer}
+.debt-card .debt-balance{margin-top:16px}.debt-card .meter-block{margin-top:14px}
+.details-panel{margin-top:16px}.details-panel summary{cursor:pointer;color:var(--accent);font-size:12px;padding:8px 0}
+@media(max-width:395px){.category-breakdown{column-gap:7px;grid-template-columns:minmax(70px,.8fr) minmax(20px,1fr) max-content}.report-controls{align-items:flex-start}}
+.panel-heading>div{min-width:0}.panel-heading h2{overflow-wrap:anywhere}
+.setting-row>div{min-width:0}.setting-row select{flex:0 0 auto;min-width:88px}

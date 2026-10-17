@@ -10,7 +10,7 @@ const estimate = computed(() => {
 </script>
 <template>
   <section class="accrual-estimate" aria-label="Date-aware debt estimate">
-    <dl class="debt-facts"><div><dt>Saved balance as of</dt><dd>{{ debt.balanceAsOf || 'Date unknown' }}</dd></div><div><dt>Accrual model</dt><dd>{{ debt.interestMethod === 'monthly' ? 'Nominal monthly · completed periods' : debt.interestMethod === 'daily-365' ? 'Simple daily · 365' : 'Simple daily · 360' }}</dd></div><div><dt>Estimated unposted interest</dt><dd>{{ estimate===null ? '—' : formatMoney(estimate.interestCents) }}</dd></div><div><dt>Estimated present balance</dt><dd>{{ estimate===null ? '—' : formatMoney(estimate.estimatedBalanceCents) }}</dd></div></dl>
-    <p class="form-hint">{{ estimate ? `Through ${today ?? localDate()} · ${estimate.days} elapsed days. Simple planning estimate; saved balance unchanged.` : 'Add a balance reference date and rate to calculate a dated estimate.' }} No grace periods, fees, compounding or lender-specific daily balances are assumed.</p>
+    <dl class="debt-facts"><div><dt>Saved balance as of</dt><dd class="mono">{{ debt.balanceAsOf || 'Date unknown' }}</dd></div><div><dt>Accrual model</dt><dd class="mono">{{ debt.interestMethod === 'monthly' ? 'Nominal monthly · completed periods' : debt.interestMethod === 'daily-365' ? 'Simple daily · 365' : 'Simple daily · 360' }}</dd></div><div><dt>Estimated unposted interest</dt><dd class="mono">{{ estimate===null ? '—' : formatMoney(estimate.interestCents) }}</dd></div><div><dt>Estimated present balance</dt><dd class="mono">{{ estimate===null ? '—' : formatMoney(estimate.estimatedBalanceCents) }}</dd></div></dl>
+    <p class="form-hint">{{ estimate ? `Through ${today ?? localDate()} · ${estimate.days} elapsed days. Simple planning estimate; saved balance unchanged.` : 'Add a balance reference date and rate to calculate a dated estimate.' }}</p>
   </section>
 </template>

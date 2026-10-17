@@ -36,7 +36,7 @@ export const useFinanceStore = defineStore('finance', () => {
 
   const monthData = computed(() => months.value.find(m => m.key === month.value))
   const monthObligations = computed(() => obligations.value.filter(o => o.month === month.value)
-    .slice().sort((a, b) => (a.dueDay ?? 32) - (b.dueDay ?? 32) || a.name.localeCompare(b.name)))
+    .slice().sort((a, b) => (a.dueDay ?? 32) - (b.dueDay ?? 32) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)))
   const monthTransactions = computed(() => transactions.value.filter(t => t.date.slice(0, 7) === month.value)
     .slice().sort(compareTransactions))
   const expectedOccurrences = computed(() => recurringOccurrences.value.filter(o => o.month === month.value && o.kind === 'income'))
