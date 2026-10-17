@@ -62,7 +62,7 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
           </div>
           <div v-if="!store.loaded" class="loading-state" role="status">Opening local workspace…</div>
           <section v-else-if="store.error" class="error-panel" role="alert"><strong>Local storage unavailable</strong><p>{{ store.error }}</p><p>Use a supported browser with IndexedDB enabled. No data has been sent anywhere.</p><button class="button" @click="store.start()">Retry local storage</button></section>
-          <template v-else><section v-if="store.operationError" class="error-panel" role="alert"><strong>Action could not complete</strong><p>{{ store.operationError }}</p><button class="button small" @click="store.dismissError()">Dismiss error</button></section><RouterView /></template>
+          <template v-else><section v-if="store.operationError" class="error-panel" role="alert"><strong>Action could not complete</strong><p>{{ store.operationError }}</p><button class="button small" @click="store.dismissError()">Dismiss error</button></section><section v-if="store.planIncomplete" class="error-panel" role="alert"><strong>Monthly plan may be incomplete</strong><p>Recurring items for this month have not finished generating. Planned totals and available-after-bills estimates may omit items. Recorded Ledger entries remain live.</p><p v-if="store.recurrenceWarning">{{ store.recurrenceWarning }}</p><button v-if="store.recurrenceWarning" class="button small" @click="store.retryRecurrence()">Retry recurring items</button></section><RouterView /></template>
         </main>
         <aside id="main-navigation" class="right-rail" tabindex="-1" :class="{ open: sidebarOpen }">
           <BrandMark />
@@ -74,7 +74,7 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
           </nav>
           <div class="rail-spacer" />
           <div class="rail-summary">
-            <div class="rail-heading">{{ monthLabel }} / PLAN</div>
+            <p v-if="store.planIncomplete" class="error-message">Plan incomplete · retry recurring items</p><div class="rail-heading">{{ monthLabel }} / PLAN</div>
             <div class="rail-metric mono" :class="{ 'rail-negative': store.summary.remainingCents < 0 }">{{ formatMoney(store.summary.remainingCents) }}</div>
             <p>Unallocated after planned outflow. Not a verified bank balance.</p>
             <div class="rail-rule" />

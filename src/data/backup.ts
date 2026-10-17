@@ -1,3 +1,4 @@
+import { monthlyInterest } from '../domain/debt'
 import { isDemo } from './workspace'
 import { db, readWorkspace } from './database'
 import { portableBackupSchema, now, type Backup } from '../domain/models'
@@ -17,6 +18,7 @@ export function validateBackup(content: unknown): Backup {
   unique('balance events', data.balanceEvents.map(row => row.id))
   for (const event of data.balanceEvents) {
     if (event.kind === 'interest' && (event.period === null || event.rateMilliPercent === null || event.id !== `interest:${event.debtId}:${event.period}`)) throw new Error('Invalid interest period event.')
+    if (event.kind === 'interest' && (event.date.slice(0, 7) !== event.period || event.deltaCents !== monthlyInterest(event.balanceBeforeCents, event.rateMilliPercent!))) throw new Error('Interest event date or historical calculation does not match its period/rate.')
     if (event.kind !== 'interest' && event.period !== null) throw new Error('Only interest events can claim a period.')
   }
   unique('months', data.months.map(row => row.key))
@@ -83,4 +85,11 @@ export function downloadFile(filename: string, content: string, mime = 'applicat
   anchor.click()
   anchor.remove()
   window.setTimeout(() => URL.revokeObjectURL(url), 3000)
+}
+
+/** Recovery-only envelope: preserves corrupt rows without mislabelling them a portable backup. */
+export async function recoverySnapshot() {
+  const current = { format: 'accrynt-portable', schemaVersion: 4, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(), ...await readWorkspace() }
+  try { return { raw: false, data: validateBackup(current) } }
+  catch { return { raw: true, data: { ...current, format: 'accrynt-raw-recovery', warning: 'UNVALIDATED recovery data. Not directly restorable. Preserve this file for manual repair.' } } }
 }
