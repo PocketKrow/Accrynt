@@ -32,12 +32,12 @@ async function exportData(page: Page) {
 
 test('income drafts close on month changes; paid bills stay separate from ledger and persist after reload', async ({ page }) => {
   await openPlan(page)
-  await page.getByRole('button', { name: 'Edit monthly income' }).click()
+  await page.getByRole('button', { name: 'Edit additional income' }).click()
   const input = page.locator('.inline-editor input')
   await input.fill('1234.56')
   await page.getByRole('button', { name: 'Next month' }).click()
   await expect(input).not.toBeVisible()
-  await page.getByRole('button', { name: 'Edit monthly income' }).click()
+  await page.getByRole('button', { name: 'Edit additional income' }).click()
   await expect(input).toHaveValue('0.00')
   await input.fill('1000.00')
   await page.getByRole('button', { name: 'Save', exact: true }).click()
