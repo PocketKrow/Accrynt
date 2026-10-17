@@ -86,3 +86,12 @@ export function longMonth(key: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     .format(date)
 }
+
+/** Plan amount stays fixed; receipt status follows linked actual and future-dated deposits. */
+export function incomeReceipt(occurrence: { id: string; amountCents: number }, transactions: Transaction[], cutoff = localDate()) {
+  const linked = transactions.filter(t => t.kind === 'income' && t.incomeOccurrenceId === occurrence.id)
+  const receivedCents = sum(linked.filter(t => t.date <= cutoff).map(t => t.amountCents))
+  const scheduledCents = sum(linked.filter(t => t.date > cutoff).map(t => t.amountCents))
+  return { receivedCents, scheduledCents, remainingCents: Math.max(0, occurrence.amountCents - receivedCents),
+    status: receivedCents >= occurrence.amountCents ? 'Received' : receivedCents > 0 ? 'Partial' : 'Expected' }
+}

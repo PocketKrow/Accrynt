@@ -53,7 +53,7 @@ test('interest preview responds to inputs; saved forecasts survive reload withou
   await expect(preview).toContainText('23 monthly payments')
   await dialog.getByRole('button', { name: 'Save debt' }).click()
   const backup = await exportData(page)
-  expect(backup.schemaVersion).toBe(4)
+  expect(backup.schemaVersion).toBe(5)
   expect(backup.debts[0]).toMatchObject({ balanceCents: 100000, aprMilliPercent: 12000, monthlyPaymentCents: 5000 })
   expect(backup.obligations).toEqual([])
   expect(backup.transactions).toEqual([])

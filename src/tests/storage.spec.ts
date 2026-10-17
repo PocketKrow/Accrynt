@@ -19,7 +19,7 @@ const obligation = (debtId: string | null = null): Obligation => ({ id: newId(),
   name: 'Test bill', category: 'Utilities', plannedCents: 2000, dueDay: 31, paidAt: null, debtId, updatedAt: now() })
 const transaction = (obligationId: string | null = null): Transaction => ({ id: newId(), date: '2026-12-31',
   name: 'Test payment', kind: 'expense', category: 'Utilities', amountCents: 1800, account: 'Test checking', obligationId, payment: null, updatedAt: now() })
-const blankBackup = (): Backup => ({ format: 'accrynt-portable', schemaVersion: 4, workspace: 'personal', balanceEvents: [], exportedAt: now(),
+const blankBackup = (): Backup => ({ format: 'accrynt-portable', schemaVersion: 5, workspace: 'personal', balanceEvents: [], exportedAt: now(),
   months: [], obligations: [], transactions: [], debts: [], recurringRules: [], recurringOccurrences: [] })
 
 beforeEach(async () => { await db.open(); await clearWorkspace() })
@@ -177,7 +177,7 @@ describe('portable backup safety', () => {
     const o = obligation(); const t = { ...transaction(o.id), date: '2027-01-02', amountCents: 0 }
     const { payment: _receipt, ...legacyTransaction } = t
     await restoreBackup({ format: 'accrynt-portable', schemaVersion: 1, exportedAt: now(), months: [], debts: [], obligations: [o], transactions: [legacyTransaction] })
-    expect((await exportBackup()).transactions[0]).toEqual(t)
+    expect((await exportBackup()).transactions[0]).toEqual({ ...t, incomeOccurrenceId: null })
   })
 })
 
@@ -186,7 +186,7 @@ describe('debt payment storage and upgrades', () => {
     const d = debt()
     await repo.saveDebt({ ...d, monthlyPaymentCents: 3500 })
     let backup = await exportBackup()
-    expect(backup.schemaVersion).toBe(4)
+    expect(backup.schemaVersion).toBe(5)
     expect(backup.debts[0].monthlyPaymentCents).toBe(3500)
     await repo.saveDebt({ ...backup.debts[0], monthlyPaymentCents: 0 }, backup.debts[0].id)
     backup = await exportBackup()

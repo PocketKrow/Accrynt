@@ -58,7 +58,7 @@ async function copyPrevious() {
     <template #actions><button class="button primary" @click="openForm()">+ Add obligation</button></template>
   </PageHeader>
   <div class="metrics-grid three">
-    <article class="metric-card"><div class="metric-label">Expected income</div><div class="metric-value mono">{{ formatMoney(store.expectedIncomeCents) }}</div><button class="text-link" @click="startIncome">Edit monthly income ↗</button></article>
+    <article class="metric-card"><div class="metric-label">Expected income</div><div class="metric-value mono">{{ formatMoney(store.expectedIncomeCents) }}</div><p class="metric-detail">{{ formatMoney(store.expectedIncomeCents - (store.monthData?.incomeCents ?? 0)) }} recurring + {{ formatMoney(store.monthData?.incomeCents ?? 0) }} additional</p><button class="text-link" @click="startIncome">Edit additional income ↗</button></article>
     <article class="metric-card"><div class="metric-label">Planned outflow</div><div class="metric-value mono">{{ formatMoney(store.summary.plannedCents) }}</div><p class="metric-detail">{{ store.summary.obligationCount }} obligations</p></article>
     <article class="metric-card metric-emphasis"><div class="metric-label">Unallocated</div><div class="metric-value mono">{{ formatMoney(store.summary.remainingCents) }}</div><p class="metric-detail">Not a verified bank balance</p></article>
   </div>
