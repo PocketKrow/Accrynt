@@ -1,4 +1,4 @@
-# Accrynt · v0.6
+# Accrynt · v0.7
 
 A personal, local-first finance workspace built with **Vue 3 + Vite + TypeScript + SCSS + Pinia + Vue Router + Dexie/IndexedDB + Zod**. The Carbon × Glacier identity, full-viewport workspace, six sections, and right desktop rail are preserved. There is no account system or backend.
 
@@ -31,6 +31,15 @@ npm run test:e2e
 ```
 
 Playwright may need system libraries. Its `install --with-deps` option supports its documented Linux distributions; CI uses Ubuntu. `ACCRYNT_CHROMIUM_PATH` optionally selects an existing Chromium executable for local tests and does not affect the app.
+
+## What v0.7 adds
+
+- A **Download raw recovery** action on the storage-error screen reads the existing native database without running an upgrade. It can preserve legacy rows after an aborted migration even when Settings cannot open. The file is unvalidated and needs manual repair; it cannot bypass browser restrictions or restore evicted data.
+- **Copy previous month** previews an explicit choice to replace additional expected income. Existing income, including zero, is kept by default; opening cash is always kept. Paid marks reset on copied bills, and recurring snapshots remain separate.
+- Updating the offline app asks before discarding an open dialog or inline form. Cancel keeps the form open; drafts are not persisted automatically.
+- Compact debt estimates retain reference dates and methods, with details and historical paid-off payment terms available on demand. Plan and cash labels, scheduled-income navigation, cross-month payment cues, receipt timestamps and partial-period reports are clearer.
+
+This main-targeted continuation includes the previously reviewed v0.6 work. Publishing the PR does not itself update main or deploy the app. See [v0.7 review decisions and verification](docs/QA-review-v0.7.md).
 
 ## What v0.4 adds
 
@@ -71,7 +80,7 @@ The manual paid checkbox remains for payments tracked elsewhere. It only records
 
 Recurring items are **monthly plan definitions**, not background money movements. A month is generated when opened in the app, including offline. Deterministic occurrence keys and an IndexedDB transaction prevent duplicate generation across reloads or tabs. Days beyond the month's length use its last day.
 
-Use **Repeat monthly** on an existing bill to adopt that entry without duplicating it. Adding a new bill rule with the same name in its start month is rejected with a pointer to this action. Existing monthly entries are snapshots. Editing or pausing a rule affects months not generated yet; already generated months retain their edits. Deleting a generated bill leaves a skipped occurrence so it does not return on reload. Income can be edited, skipped, and restored for one month. Previous-month copy copies additional expected income and non-recurring bills alongside generated bills without duplicating recurrence; it does not carry opening cash forward.
+Use **Repeat monthly** on an existing bill to adopt that entry without duplicating it. Adding a new bill rule with the same name in its start month is rejected with a pointer to this action. Existing monthly entries are snapshots. Editing or pausing a rule affects months not generated yet; already generated months retain their edits. Deleting a generated bill leaves a skipped occurrence so it does not return on reload. Income can be edited, skipped, and restored for one month. Previous-month copy adds non-recurring bills alongside generated bills without duplicating recurrence. Existing additional income (including zero) stays unless replacement is explicitly selected; a new month can preselect previous additional income. It does not carry opening cash forward.
 
 ## Debt forecasts
 
@@ -85,11 +94,11 @@ Records remain in IndexedDB **`accrynt-local-v1`**, now at Dexie schema version 
 
 **Settings → Download JSON backup** exports all seven tables using `accrynt-portable` schema **5**, including receipts, opening balances, rules, skipped entries, and monthly snapshots. Strict v1/v2/v3/v4 backups remain supported with neutral defaults for new fields. Old app releases cannot restore v5 exports. Restore validates IDs, references, receipt arithmetic, and recurrence keys before atomic replacement. The file picker has a 15 MB limit. Backups are unencrypted.
 
-Browser data clearing, profile removal, or eviction can remove records. Persistent-storage permission may be declined and does not replace external backups. A storage error offers Retry without clearing records. Selected month starts at the current month on launch; historical plans remain accessible. Optional historical example data loads only on request into a completely empty workspace.
+Browser data clearing, profile removal, or eviction can remove records. Persistent-storage permission may be declined and does not replace external backups. A storage error offers Retry and a separate native raw-recovery download without clearing records. Native recovery includes the actual database version and all existing stores in a `tables` object; it does not validate, migrate or repair them. Native version 30 means Dexie v3, and 40 means Dexie v4. Both this envelope and the existing Settings raw envelope are deliberately rejected by portable import. Browser-denied storage remains inaccessible, and raw JSON is intended for the app’s JSON-compatible records. Selected month starts at the current month on launch; historical plans remain accessible. Optional historical example data loads only on request into a completely empty workspace.
 
 ## Offline operation and validation
 
-A production app visited online can reload offline after its service worker activates and controls a subsequent navigation. Updates use a user-controlled reload prompt. `npm run dev` is not the offline verification target.
+A production app visited online can reload offline after its service worker activates and controls a subsequent navigation. Updates use a user-controlled reload prompt, with an additional discard confirmation when a dialog form or inline editor is open. This checks for an open form rather than tracking whether individual fields changed. It does not protect against an ordinary browser reload or navigation. `npm run dev` is not the offline verification target.
 
 GitHub Actions checks types, unit/storage tests, the production build, and Chromium/Firefox browser workflows. Detailed contracts and verification are in [docs/QA-connected-workflow.md](docs/QA-connected-workflow.md). Earlier [v0.2 evidence](docs/QA-v0.2.md) and [v0.3 debt evidence](docs/QA-debt-interest.md) document those releases.
 

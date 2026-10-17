@@ -2,6 +2,8 @@
 
 Author: Jacob. Tested 2026-10-17 UTC with synthetic/disposable records.
 
+Historical v0.6 report. The later stacked merges did not bring the complete continuation into main. The new single-main-targeted integration and current checks are documented in [v0.7 verification](QA-review-v0.7.md); the results and screenshots below describe the earlier tree.
+
 ## Integration and review order
 
 Current main was `c3cd21f3cb533015a817680be5c4085e8d999369`. PR #5 had been merged into the demo branch and #6 into the viewport branch, leaving main behind. The integration joins main and `09add097041d687735752837e7f78355af0c8f6a`; its tree is exactly reviewed `c3b6dd75c490bb7fce0b8bdfbb2b5a20566ac08f`. No newer source or AGENTS.md was present. No commits were replayed twice. Branches were published through the GitHub connector because the clone had no CLI write credentials; remote trees were checked against local Git hashes.
