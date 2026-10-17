@@ -53,8 +53,8 @@ test('interest preview responds to inputs; saved forecasts survive reload withou
   await expect(preview).toContainText('23 monthly payments')
   await dialog.getByRole('button', { name: 'Save debt' }).click()
   const backup = await exportData(page)
-  expect(backup.schemaVersion).toBe(3)
-  expect(backup.debts[0]).toMatchObject({ balanceCents: 100000, aprBasisPoints: 1200, monthlyPaymentCents: 5000 })
+  expect(backup.schemaVersion).toBe(4)
+  expect(backup.debts[0]).toMatchObject({ balanceCents: 100000, aprMilliPercent: 12000, monthlyPaymentCents: 5000 })
   expect(backup.obligations).toEqual([])
   expect(backup.transactions).toEqual([])
   // The v2 file restores both saved payment plans and forecast inputs.
@@ -85,7 +85,7 @@ test('missing rates, zero rates, zero payments, and interest-only payments have 
   await expect(preview).toContainText('Add a monthly payment')
   await payment.fill('')
   await expect(preview).toContainText('23 monthly payments')
-  await rate.fill('12.345')
+  await rate.fill('12.3456')
   await expect(preview).not.toBeVisible()
   await dialog.getByRole('button', { name: 'Save debt' }).click()
   await expect(dialog.getByRole('alert')).toBeVisible()
@@ -94,7 +94,7 @@ test('missing rates, zero rates, zero payments, and interest-only payments have 
   await expect(page.locator('.debt-card')).toContainText('20 monthly payments')
   const backup = await exportData(page)
   expect(backup.debts[0].monthlyPaymentCents).toBeNull()
-  expect(backup.debts[0].aprBasisPoints).toBe(0)
+  expect(backup.debts[0].aprMilliPercent).toBe(0)
 })
 
 test('legacy backup debts gain forecasts; schedules paginate and stay within the mobile viewport in both themes', async ({ page }) => {
@@ -174,7 +174,7 @@ test('an existing v1 browser database upgrades in place with linked records inta
   await expect(page.locator('.debt-card')).toContainText('26 monthly payments')
   const backup = await exportData(page)
   expect(backup.debts[0]).toMatchObject({ balanceCents: 100000, startingBalanceCents: 120000,
-    minimumCents: 5000, aprBasisPoints: 2400, monthlyPaymentCents: null, updatedAt: '2026-10-01T00:00:00.000Z' })
+    minimumCents: 5000, aprMilliPercent: 24000, monthlyPaymentCents: null, balanceAsOf: null, interestMethod: 'monthly', updatedAt: '2026-10-01T00:00:00.000Z' })
   expect(backup.months).toHaveLength(1)
   expect(backup.obligations[0].debtId).toBe(backup.debts[0].id)
   expect(backup.transactions[0].obligationId).toBe(backup.obligations[0].id)

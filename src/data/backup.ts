@@ -4,7 +4,7 @@ import { portableBackupSchema, now, type Backup } from '../domain/models'
 
 export async function exportBackup(): Promise<Backup> {
   const data: Backup = {
-    format: 'accrynt-portable', schemaVersion: 3, exportedAt: now(),
+    format: 'accrynt-portable', schemaVersion: 4, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(),
     ...await readWorkspace()
   }
   return validateBackup(data)
@@ -13,6 +13,11 @@ export function validateBackup(content: unknown): Backup {
   const data = portableBackupSchema.parse(content)
   const unique = (label: string, ids: string[]) => {
     if (new Set(ids).size !== ids.length) throw new Error(`Backup has duplicate ${label} IDs.`)
+  }
+  unique('balance events', data.balanceEvents.map(row => row.id))
+  for (const event of data.balanceEvents) {
+    if (event.kind === 'interest' && (event.period === null || event.rateMilliPercent === null || event.id !== `interest:${event.debtId}:${event.period}`)) throw new Error('Invalid interest period event.')
+    if (event.kind !== 'interest' && event.period !== null) throw new Error('Only interest events can claim a period.')
   }
   unique('months', data.months.map(row => row.key))
   unique('obligations', data.obligations.map(row => row.id))
@@ -32,6 +37,7 @@ export function validateBackup(content: unknown): Backup {
     // Historical receipts retain their debt identity after obligation relinking/debt deletion.
     const p = row.payment
     if (p) {
+      if (p.balanceAsOfAfter !== null && (p.debtId === null || p.balanceAsOfAfter !== row.date)) throw new Error('Payment receipt has an invalid balance reference date.')
       if (row.amountCents <= 0 || row.kind === 'income' || (p.debtId === null && (row.kind !== 'expense' || p.debtName !== null || p.principalCents !== 0 || p.interestCents !== 0 || p.interestIncludedInBalance || p.balanceBeforeCents !== null || p.balanceAfterCents !== null)) ||
         (p.debtId !== null && (row.kind !== 'debt-payment' || row.category !== 'Debt payments' || p.debtName === null ||
           p.balanceBeforeCents === null || p.balanceAfterCents === null || p.principalCents + p.interestCents !== row.amountCents ||
@@ -65,6 +71,7 @@ export async function restoreBackup(content: unknown) {
     await db.debts.bulkAdd(data.debts)
     await db.recurringRules.bulkAdd(data.recurringRules)
     await db.recurringOccurrences.bulkAdd(data.recurringOccurrences)
+    await db.balanceEvents.bulkAdd(data.balanceEvents)
   })
 }
 export function downloadFile(filename: string, content: string, mime = 'application/json') {

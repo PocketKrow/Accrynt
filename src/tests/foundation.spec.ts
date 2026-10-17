@@ -59,7 +59,7 @@ describe('foundation regressions', () => {
     [150000,1700,4500,46,54444,1944], [100000,1200,1001,703,603072,370],
     [10001,1200,5000,3,153,154], [100000,1200,12500,9,4762,4762]
   ])('preserves golden amortization %i/%i/%i', (balanceCents,aprBasisPoints,monthlyPaymentCents,months,totalInterestCents,finalPaymentCents) => {
-    expect(projectDebt({ balanceCents, aprBasisPoints, monthlyPaymentCents, minimumCents: 0 })).toMatchObject({ months,totalInterestCents,finalPaymentCents })
+    expect(projectDebt({ balanceCents, aprMilliPercent: aprBasisPoints * 10, monthlyPaymentCents, minimumCents: 0 })).toMatchObject({ months,totalInterestCents,finalPaymentCents })
   })
 })
 

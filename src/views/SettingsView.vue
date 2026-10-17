@@ -17,6 +17,15 @@ const storageEstimate = ref('Not checked')
 const selectedFile = ref<File | null>(null)
 const backupInput = ref<HTMLInputElement | null>(null)
 const readyBackup = ref<Backup | null>(null)
+const restoreAgeWarning = computed(() => {
+  if (!readyBackup.value) return ''
+  const newest = [...store.months, ...store.obligations, ...store.transactions, ...store.debts, ...store.recurringRules, ...store.recurringOccurrences].map(r => r.updatedAt).concat(store.balanceEvents.flatMap(e => [e.recordedAt, e.reversedAt ?? e.recordedAt])).sort().at(-1)
+  return newest && newest > readyBackup.value.exportedAt ? 'This backup was exported before your newest local changes. Restoring will replace those newer records.' : ''
+})
+async function safetySnapshot(action:string) {
+  const current=await exportBackup()
+  downloadFile(`Accrynt-before-${action}-${Date.now()}.json`, JSON.stringify(current,null,2))
+}
 const importError = ref('')
 let selectionVersion = 0
 const rowCounts = computed(() => ({
@@ -56,6 +65,7 @@ async function restore() {
   if (!confirm(`Replace ALL local Accrynt data with this backup (${counts})? This overwrites existing records. Export your current data first.`)) return
   busy.value = true; error.value = ''
   try {
+    await safetySnapshot('restore')
     await restoreBackup(readyBackup.value)
     readyBackup.value = null; selectedFile.value = null
     if (backupInput.value) backupInput.value.value = ''
@@ -95,6 +105,7 @@ async function clearAll() {
   if (prompt('Type DELETE to permanently clear this local database:') !== 'DELETE') return
   busy.value = true; error.value = ''
   try {
+    await safetySnapshot('clear')
     await clearWorkspace()
     store.notify('All local financial records cleared.')
   } catch (e) { handleError(e) } finally { busy.value = false }
@@ -108,12 +119,14 @@ async function clearAll() {
       <div class="setting-row"><div><strong>Storage engine</strong><p>IndexedDB via Dexie. No account, server, banking connection, or cloud sync.</p></div><span class="status-pill">LOCAL</span></div>
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">YOUR RECORDS</span><h2>Backup & restore</h2></div></div>
-      <p class="body-copy">Export a versioned portable JSON archive. Save it somewhere outside this browser. Restore replaces all records only after validation and explicit confirmation.</p>
+      <p class="body-copy">Export a portable v4 JSON archive. This version requires the updated app; older app versions cannot read v4 exports. Imports from v1–v3 remain supported. Save it somewhere outside this browser. Restore replaces all records only after validation and explicit confirmation.</p>
       <div class="data-counts"><span>{{ rowCounts.months }} months</span><span>{{ rowCounts.obligations }} obligations</span><span>{{ rowCounts.transactions }} transactions</span><span>{{ rowCounts.debts }} debts</span><span>{{ rowCounts.recurringRules }} recurring rules</span><span>{{ rowCounts.recurringOccurrences }} recurring entries</span></div>
       <button class="button primary" :disabled="busy" @click="exportData">Download JSON backup</button>
       <hr class="section-divider"/>
       <label class="file-label">Select an Accrynt backup file<input ref="backupInput" type="file" :disabled="busy" accept="application/json,.json" @change="chooseBackup" /></label>
       <p v-if="readyBackup" class="success-message">Validated backup: {{ readyBackup.months.length }} month(s), {{ readyBackup.obligations.length }} obligation(s), {{ readyBackup.transactions.length }} transaction(s), {{ readyBackup.debts.length }} debt(s), {{ readyBackup.recurringRules.length }} recurring rule(s), {{ readyBackup.recurringOccurrences.length }} recurring entry/entries.</p>
+      <p v-if="readyBackup" class="body-copy">Exported {{ readyBackup.exportedAt }} · {{ readyBackup.workspace==='demo-synthetic' ? 'DEMO · SYNTHETIC DATA' : 'Personal workspace' }} · {{ readyBackup.balanceEvents.length }} balance adjustments. A current safety snapshot downloads before replacement.</p>
+      <p v-if="restoreAgeWarning" class="error-message" role="alert">{{ restoreAgeWarning }}</p>
       <p v-if="importError" class="error-message" role="alert">{{ importError }}</p>
       <button v-if="readyBackup" class="button danger-button" :disabled="busy" @click="restore">Replace local records with backup</button>
     </section>
@@ -128,7 +141,7 @@ async function clearAll() {
       <button v-if="!store.hasAnyData" class="button" :disabled="busy" @click="loadSample">Load selected-month example</button>
       <p v-else class="muted small-text">Example import is disabled because this workspace already has data.</p>
       <hr class="section-divider"/>
-      <p class="body-copy">Permanent deletion affects only the current browser's Accrynt database; existing downloaded backups are unaffected.</p>
+      <p class="body-copy">A current downloadable safety snapshot is prepared before deletion. Permanent deletion affects only the current browser's Accrynt database; existing downloaded backups are unaffected.</p>
       <button class="button danger-button" :disabled="busy || !store.hasAnyData" @click="clearAll">Delete all local records</button>
     </section>
   </div>

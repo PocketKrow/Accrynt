@@ -1,3 +1,4 @@
+import { newerBalanceEvent } from './balance-events'
 import { db } from './database'
 import { checkEdit, nextTimestamp } from './integrity'
 import { paymentSplit } from '../domain/payment'
@@ -23,7 +24,7 @@ export const connectedRepository = {
   async recordPayment(input: RecordPaymentInput) {
     if (input.date > localDate()) throw new Error('Record payments after money has moved. Use Monthly Plan for future payments.')
     if (!input.debtId && !input.obligationId) throw new Error('Choose a debt or obligation to pay.')
-    return db.transaction('rw', db.transactions, db.debts, db.obligations, async () => {
+    return db.transaction('rw', db.transactions, db.debts, db.obligations, db.balanceEvents, async () => {
       const previous = await db.transactions.get(input.id)
       if (previous) {
         if (previous.payment && previous.date === input.date && previous.name === input.name && previous.amountCents === input.amountCents &&
@@ -45,6 +46,7 @@ export const connectedRepository = {
       }
       if (!debt && input.interestCents !== 0) throw new Error('Only debt payments can include an interest split.')
       if (!debt && input.interestIncludedInBalance) throw new Error('Only debt payments can specify interest in the saved balance.')
+      if (debt?.balanceAsOf && input.date < debt.balanceAsOf) throw new Error('Payment date precedes the saved balance reference date. Reconcile the statement before recording it.')
       const split = debt ? paymentSplit(debt.balanceCents, input.amountCents, input.interestCents, input.interestIncludedInBalance ?? false) : null
       const stamp = nextTimestamp(debt?.updatedAt ?? obligation!.updatedAt)
       const row = transactionSchema.parse({ id: input.id, date: input.date, name: input.name,
@@ -52,25 +54,26 @@ export const connectedRepository = {
         amountCents: input.amountCents, account: input.account, obligationId: input.obligationId, updatedAt: stamp,
         payment: { recordedAt: stamp, debtId: debt?.id ?? null, debtName: debt?.name ?? null, principalCents: split?.principalCents ?? 0,
           interestCents: split?.interestCents ?? 0, interestIncludedInBalance: debt ? input.interestIncludedInBalance ?? false : false,
+          balanceAsOfBefore: debt?.balanceAsOf ?? null, balanceAsOfAfter: debt ? input.date : null,
           balanceBeforeCents: debt?.balanceCents ?? null, balanceAfterCents: split?.balanceAfterCents ?? null } })
       if (row.amountCents <= 0) throw new Error('Payment must be greater than zero.')
-      if (debt && split) await db.debts.update(debt.id, { balanceCents: split.balanceAfterCents, updatedAt: stamp })
+      if (debt && split) await db.debts.update(debt.id, { balanceCents: split.balanceAfterCents, balanceAsOf: input.date, updatedAt: stamp })
       if (obligation) await db.obligations.update(obligation.id, { updatedAt: nextTimestamp(obligation.updatedAt) })
       await db.transactions.add(row)
       return row
     })
   },
   async undoPayment(id: string, expectedUpdatedAt: string) {
-    await db.transaction('rw', db.transactions, db.debts, db.obligations, async () => {
+    await db.transaction('rw', db.transactions, db.debts, db.obligations, db.balanceEvents, async () => {
       const row = await db.transactions.get(id)
       checkEdit(row, expectedUpdatedAt)
       if (!row.payment) throw new Error('This entry is not a connected payment.')
       const receipt = row.payment
       const debt = receipt.debtId ? await db.debts.get(receipt.debtId) : undefined
       if (debt) {
-        const newer = await db.transactions.filter(t => t.payment?.debtId === debt.id && t.payment.recordedAt > receipt.recordedAt).count()
-        if (newer || debt.balanceCents !== receipt.balanceAfterCents) throw new Error('The debt has changed since this payment. Undo newer payments first, or reconcile the balance with your statement before undoing.')
-        await db.debts.update(debt.id, { balanceCents: receipt.balanceBeforeCents!, updatedAt: nextTimestamp(debt.updatedAt) })
+        const newer = await newerBalanceEvent(debt.id, receipt.recordedAt)
+        if (newer || debt.balanceCents !== receipt.balanceAfterCents || debt.balanceAsOf !== receipt.balanceAsOfAfter) throw new Error('The debt has changed since this payment. Undo newer payments or reverse newer balance adjustments first. The saved balance and reference date must match this receipt.')
+        await db.debts.update(debt.id, { balanceCents: receipt.balanceBeforeCents!, balanceAsOf: receipt.balanceAsOfBefore, updatedAt: nextTimestamp(debt.updatedAt) })
       }
       const obligation = row.obligationId ? await db.obligations.get(row.obligationId) : undefined
       if (obligation) await db.obligations.update(obligation.id, { updatedAt: nextTimestamp(obligation.updatedAt) })
