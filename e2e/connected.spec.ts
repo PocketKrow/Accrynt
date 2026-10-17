@@ -28,7 +28,7 @@ async function backup(page: Page) {
   for await (const chunk of stream) chunks.push(Buffer.from(chunk))
   return JSON.parse(Buffer.concat(chunks).toString('utf8'))
 }
-async function fixedDate(page: Page) { await page.clock.install({ time: new Date('2026-10-16T12:00:00Z') }) }
+async function fixedDate(page: Page) { await page.clock.setFixedTime(new Date('2026-10-16T12:00:00Z')) }
 async function pay(page: Page, amount: string, interest: string) {
   const dialog = page.getByRole('dialog', { name: 'Record payment', exact: true })
   await dialog.getByLabel('Payment amount (USD)').fill(amount)
@@ -75,7 +75,7 @@ test('one payment updates principal, partial bill status, cashflow, and Ledger; 
   await expect(second).not.toBeVisible()
   await page.goto('/#/plan'); await expect(row).toContainText('Partial')
   const exported = await backup(page)
-  expect(exported.schemaVersion).toBe(4)
+  expect(exported.schemaVersion).toBe(5)
   expect(exported.debts[0].balanceCents).toBe(91000)
   expect(exported.months[0].openingCents).toBe(100000)
   expect(exported.transactions).toHaveLength(2)

@@ -16,11 +16,10 @@ async function reset() {
 </script>
 <template>
   <section class="demo-banner" aria-label="Demo workspace">
-    <strong>DEMO · SYNTHETIC DATA</strong>
-    <span>Edits stay in this demo on your device.</span>
-    <label>Scenario<select v-model="scenario" :disabled="busy"><option value="showroom">Showroom</option><option value="cash-shortfall">Negative cash</option><option value="near-payoff">Near payoff</option><option value="february">February dates</option></select></label>
+    <div class="demo-description"><strong>DEMO · SYNTHETIC DATA</strong><span>Edits stay in this demo on your device.</span></div>
+    <div class="demo-actions"><label>Scenario<select v-model="scenario" :disabled="busy"><option value="showroom">Showroom</option><option value="cash-shortfall">Negative cash</option><option value="near-payoff">Near payoff</option><option value="february">February dates</option></select></label>
     <button class="button small" :disabled="busy" @click="reset">Reset demo</button>
-    <a class="text-link" :href="workspaceUrl(false)">Return to my workspace</a>
+    <a class="text-link" :href="workspaceUrl(false)">Return to my workspace</a></div>
     <p v-if="error" role="alert" class="error-message">{{ error }}</p>
   </section>
 </template>

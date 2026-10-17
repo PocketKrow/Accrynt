@@ -105,7 +105,7 @@ describe('authentic legacy migration and portable compatibility',()=>{
  it('imports original v3 export without changing any balances, IDs or interest splits; v4 roundtrips',async()=>{
   await restoreBackup(original)
   const modern=await exportBackup()
-  expect(modern.schemaVersion).toBe(4)
+  expect(modern.schemaVersion).toBe(5)
   expect(modern.debts[0]).toMatchObject({balanceCents:91000,aprMilliPercent:12000,balanceAsOf:null,interestMethod:'monthly'})
   expect(modern.debts[0]).not.toHaveProperty('aprBasisPoints')
   expect(modern.transactions[0].payment).toMatchObject(original.transactions[0].payment)

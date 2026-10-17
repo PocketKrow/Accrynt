@@ -1,4 +1,10 @@
-import type { Transaction } from './models'
+import type { Transaction, TransactionKind } from './models'
+export const transactionKindLabel: Record<TransactionKind, string> = { income: 'Income', expense: 'Expense', 'debt-payment': 'Debt payment' }
+export function formatRecordedAt(value: string) {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return 'Recording time unavailable'
+  return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date)
+}
 /** Dates first, then immutable receipt timestamp; UUID is a deterministic fallback. */
 export function compareTransactions(a: Transaction, b: Transaction) {
   return b.date.localeCompare(a.date) || (b.payment?.recordedAt ?? '').localeCompare(a.payment?.recordedAt ?? '') || a.id.localeCompare(b.id)

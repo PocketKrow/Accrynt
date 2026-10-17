@@ -18,9 +18,15 @@ describe('foundation regressions', () => {
     await repo.saveOpeningBalance('2026-10', -12345); await repo.saveIncome('2026-10', income)
     await db.recurringOccurrences.add({ id: `${ruleId}:2026-10`, ruleId, month: '2026-10', kind: 'bill', name: recurring.name, amountCents: 10000, dueDay: 8, obligationId: recurring.id, cancelled: false, updatedAt: now() })
     await repo.copyPreviousMonth('2026-10')
-    expect(await db.months.get('2026-10')).toMatchObject({ openingCents: -12345, incomeCents: income || 80000 })
+    expect(await db.months.get('2026-10')).toMatchObject({ openingCents: -12345, incomeCents: income })
     expect(await db.obligations.where('month').equals('2026-10').count()).toBe(2)
     await expect(repo.copyPreviousMonth('2026-10')).rejects.toThrow('manually planned')
+  })
+  it('copies additional income only when explicitly selected for an existing month', async () => {
+    await repo.saveIncome('2026-09', 80000)
+    await repo.saveOpeningBalance('2026-10', 12345)
+    await repo.copyPreviousMonth('2026-10', { copyAdditionalIncome: true })
+    expect(await db.months.get('2026-10')).toMatchObject({ incomeCents: 80000, openingCents: 12345 })
   })
   it('distinguishes scheduled, partial and manual paid with cross-month receipts', () => {
     const o = bill(), t: Transaction = { id: newId(), date: '2026-11-02', kind: 'expense', name: 'Scheduled utility', amountCents: 10000, category: 'Utilities', account: '', obligationId: o.id, payment: null, updatedAt: now() }

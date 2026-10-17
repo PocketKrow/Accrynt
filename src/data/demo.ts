@@ -11,7 +11,7 @@ export function demoFixture(reference = localDate(), scenario: DemoScenario = 's
   if (scenario === 'february') reference = `${reference.slice(0,4)}-02-28`
   const month = scenario === 'february' ? `${reference.slice(0, 4)}-02` : reference.slice(0, 7)
   const stamp = `${reference}T12:00:00.000Z`
-  const data: Backup = { format: 'accrynt-portable', schemaVersion: 4, workspace: 'demo-synthetic', balanceEvents: [], exportedAt: stamp,
+  const data: Backup = { format: 'accrynt-portable', schemaVersion: 5, workspace: 'demo-synthetic', balanceEvents: [], exportedAt: stamp,
     months: [], obligations: [], transactions: [], debts: [], recurringRules: [], recurringOccurrences: [] }
   const debtRows: Array<[string, number, number | null, number]> = [
     ['Fictional revolving card', 216437, 24990, 10000], ['Fictional personal loan', 389000, 17000, 17500],
@@ -54,7 +54,7 @@ export function demoFixture(reference = localDate(), scenario: DemoScenario = 's
       const date = dueDate(key, rule.dueDay!)
       if (rule.kind === 'income') {
         if (date <= reference) data.transactions.push({ id: id(sequence++), date, name: rule.name, kind: 'income', category: 'Other', amountCents: rule.amountCents,
-          account: 'Synthetic checking', obligationId: null, payment: null, updatedAt: stamp })
+          account: 'Synthetic checking', obligationId: null, incomeOccurrenceId: occurrence.id, payment: null, updatedAt: stamp })
         continue
       }
       const manualPaid = rule.category === 'Insurance' && date <= reference

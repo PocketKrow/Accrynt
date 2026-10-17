@@ -2,16 +2,28 @@
 import { errorMessage } from '../domain/errors'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { localRepository } from '../data/repository'
-import { formatMoney, parseMoney, dueDate } from '../domain/finance'
+import { formatMoney, parseMoney, dueDate, incomeReceipt } from '../domain/finance'
 import { categorySchema, monthKeySchema, type Category, type Obligation, type RecurringOccurrence, type RecurringRule } from '../domain/models'
 import { useFinanceStore } from '../stores/finance'
 import TransactionForm from './TransactionForm.vue'
 
 const store = useFinanceStore(), dialog = ref<HTMLDialogElement | null>(null)
+const incomePanel = ref<HTMLElement | null>(null)
 const open = ref(false), busy = ref(false), error = ref('')
 const editing = ref<RecurringRule | null>(null), occurrence = ref<RecurringOccurrence | null>(null)
 const sourceBill = ref<Obligation | null>(null)
-const receiptOpen = ref(false), receiptSeed = ref<{ name: string; amountCents: number; kind: 'income' } | null>(null)
+const receiptOpen = ref(false), receiptSeed = ref<{ name: string; amountCents: number; kind: 'income'; incomeOccurrenceId: string } | null>(null)
+const receipts = computed(() => {
+  const linked = new Map<string, typeof store.transactions>()
+  for (const transaction of store.transactions) {
+    if (transaction.kind !== 'income' || !transaction.incomeOccurrenceId) continue
+    const entries = linked.get(transaction.incomeOccurrenceId)
+    if (entries) entries.push(transaction)
+    else linked.set(transaction.incomeOccurrenceId, [transaction])
+  }
+  return new Map(store.expectedOccurrences.map(entry => [entry.id, incomeReceipt(entry, linked.get(entry.id) ?? [], store.today)]))
+})
+const receipt = (entry: RecurringOccurrence) => receipts.value.get(entry.id) ?? incomeReceipt(entry, store.transactions, store.today)
 const activeCount = computed(() => store.recurringRules.filter(r => r.enabled).length)
 const form = reactive({ name: '', kind: 'bill' as 'bill' | 'income', amount: '', category: 'Utilities' as Category,
   day: '', debtId: '', start: '', end: '', enabled: true })
@@ -30,7 +42,8 @@ function repeatBill(bill: Obligation) {
   Object.assign(form, { name: bill.name, kind: 'bill', amount: (bill.plannedCents / 100).toFixed(2),
     category: bill.category, day: bill.dueDay?.toString() ?? '', debtId: bill.debtId ?? '', start: bill.month })
 }
-defineExpose({ repeatBill })
+function focusIncome() { incomePanel.value?.focus(); incomePanel.value?.scrollIntoView({ block: 'start' }) }
+defineExpose({ repeatBill, focusIncome })
 watch(open, async value => { await nextTick(); if (value && !dialog.value?.open) dialog.value?.showModal(); if (!value && dialog.value?.open) dialog.value.close() })
 async function submit() {
   if (busy.value) return
@@ -60,17 +73,17 @@ async function skip(entry: RecurringOccurrence) {
   try { await localRepository.saveExpectedOccurrence(entry.id, entry.amountCents, entry.dueDay, !entry.cancelled, entry.updatedAt) }
   catch (reason) { store.notify(errorMessage(reason, 'Unable to update expected income.')) }
 }
-function receive(entry: RecurringOccurrence) { receiptSeed.value = { name: entry.name, amountCents: entry.amountCents, kind: 'income' }; receiptOpen.value = true }
+function receive(entry: RecurringOccurrence) { receiptSeed.value = { name: entry.name, amountCents: receipt(entry).remainingCents || entry.amountCents, kind: 'income', incomeOccurrenceId: entry.id }; receiptOpen.value = true }
 </script>
 <template>
-  <section v-if="store.expectedOccurrences.length" class="panel expected-income-panel">
-    <div class="panel-heading"><div><span class="eyebrow">EXPECTED, NOT RECEIVED</span><h2>Scheduled income · {{ store.month }}</h2></div></div>
+  <section v-if="store.expectedOccurrences.length" ref="incomePanel" tabindex="-1" aria-label="Scheduled income" class="panel expected-income-panel">
+    <div class="panel-heading"><div><span class="eyebrow">SCHEDULED INCOME · PLAN & RECEIPTS</span><h2>Scheduled income · {{ store.month }}</h2></div></div>
     <div v-for="entry in store.expectedOccurrences" :key="entry.id" class="scheduled-row">
       <div><strong>{{ entry.name }}</strong><small>{{ entry.cancelled ? 'Skipped this month' : entry.dueDay ? `Expected ${dueDate(store.month, entry.dueDay)}` : 'Date not set' }}</small></div>
-      <strong class="mono">{{ formatMoney(entry.amountCents) }}</strong>
-      <div class="row-actions"><button v-if="!entry.cancelled" class="text-link" @click="receive(entry)">Record receipt</button><button class="text-link" @click="edit(null, entry)">Edit this month</button><button class="text-link" @click="skip(entry)">{{ entry.cancelled ? 'Restore this month' : 'Skip this month' }}</button></div>
+      <div><strong class="mono">{{ formatMoney(entry.amountCents) }} planned</strong><small>{{ receipt(entry).status }} · {{ formatMoney(receipt(entry).receivedCents) }} received · {{ formatMoney(receipt(entry).remainingCents) }} remaining<span v-if="receipt(entry).scheduledCents"> · {{ formatMoney(receipt(entry).scheduledCents) }} scheduled</span></small></div>
+      <div class="row-actions"><button v-if="!entry.cancelled" class="text-link" @click="receive(entry)">{{ receipt(entry).remainingCents ? 'Record receipt' : 'Record extra receipt' }}</button><button class="text-link" @click="edit(null, entry)">Edit this month</button><button class="text-link" @click="skip(entry)">{{ entry.cancelled ? 'Restore this month' : 'Skip this month' }}</button></div>
     </div>
-    <p class="fine-print">These amounts contribute to expected income only. Record receipts when money arrives; partial or multiple deposits can be entered in the Ledger.</p>
+    <p class="fine-print">Plan amounts stay unchanged when receipts arrive. Status uses explicitly linked deposits dated through today. Existing unlinked income stays in actual totals; link it using Edit in Ledger. Skipping changes the plan only and retains receipts.</p>
   </section>
   <details class="panel recurring-panel">
     <summary>Recurring bills &amp; income · {{ activeCount }} active</summary>
@@ -90,7 +103,7 @@ function receive(entry: RecurringOccurrence) { receiptSeed.value = { name: entry
     <form @submit.prevent="submit">
       <template v-if="!occurrence"><label>Name<input v-model="form.name" required minlength="2" maxlength="100" /></label><label>Recurring type<select v-model="form.kind" :disabled="!!editing || !!sourceBill"><option value="bill">Monthly bill</option><option value="income">Monthly income</option></select></label></template>
       <p v-if="sourceBill" class="form-hint">Keeps {{ sourceBill.name }} as this month’s entry, including its payments. These settings apply to newly generated future months.</p>
-      <p v-if="!occurrence && form.kind === 'income' && form.start === store.month && (store.monthData?.incomeCents ?? 0) > 0" class="form-hint">This month already includes {{ formatMoney(store.monthData!.incomeCents) }} of additional expected income. If it represents this same income, adjust Edit monthly income after adding the schedule to avoid counting it twice.</p>
+      <p v-if="!occurrence && form.kind === 'income' && form.start === store.month && (store.monthData?.incomeCents ?? 0) > 0" class="form-hint">This month already includes {{ formatMoney(store.monthData!.incomeCents) }} of additional expected income. If it represents this same income, adjust Edit additional income after adding the schedule to avoid counting it twice.</p>
       <label>Recurring amount (USD)<input v-model="form.amount" inputmode="decimal" required /></label>
       <label>{{ form.kind === 'income' ? 'Expected day (optional)' : 'Due day (optional)' }}<input v-model="form.day" type="number" min="1" max="31" /></label>
       <p class="form-hint">Days beyond a month’s length use its last day.</p>

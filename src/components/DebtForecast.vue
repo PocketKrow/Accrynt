@@ -22,7 +22,7 @@ const amount = (value: number | null) => value === null ? '—' : formatMoney(va
     <span class="eyebrow">{{ compact ? 'LIVE ESTIMATE' : 'REPAYMENT ESTIMATE' }}</span>
     <dl class="forecast-stats">
       <div><dt>First month interest</dt><dd class="mono">{{ amount(projection.monthlyInterestCents) }}</dd></div>
-      <div><dt>First month principal</dt><dd class="mono">{{ amount(projection.firstPrincipalCents) }}</dd></div>
+      <div v-if="compact"><dt>First month principal</dt><dd class="mono">{{ amount(projection.firstPrincipalCents) }}</dd></div>
       <div class="forecast-payoff"><dt>Estimated payoff</dt><dd>{{ payoffLabel(projection) }}</dd></div>
     </dl>
     <p v-if="projection.status === 'missing-rate'" class="form-hint">Enter a rate to calculate interest. Enter 0 for an interest-free debt.</p>
@@ -34,6 +34,7 @@ const amount = (value: number | null) => value === null ? '—' : formatMoney(va
       <summary>Calculation details &amp; schedule</summary>
       <div class="forecast-details">
         <dl class="debt-facts">
+          <div><dt>First month principal</dt><dd class="mono">{{ amount(projection.firstPrincipalCents) }}</dd></div>
           <div><dt>First payment (capped at amount owed)</dt><dd class="mono">{{ amount(projection.firstPaymentCents) }}</dd></div>
           <div><dt>Balance after first payment</dt><dd class="mono">{{ amount(projection.nextBalanceCents) }}</dd></div>
           <div><dt>Future interest through payoff</dt><dd class="mono">{{ amount(projection.totalInterestCents) }}</dd></div>
