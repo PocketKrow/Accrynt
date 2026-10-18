@@ -47,6 +47,9 @@ export class AccryntDatabase extends Dexie {
       for (const name of financialTables) health.fingerprints[name] = await Dexie.waitFor(fingerprint(await tx.table(name).toArray()))
       await tx.table('backupHealth').put(health)
     })
+    this.on('ready', () => {
+      if (this.backendDB().version !== 50) throw new Error('This workspace uses a newer or unsupported native schema. Open it with the matching updated app, or download raw recovery data. No records were changed.')
+    })
     this.on('populate', tx => tx.table('backupHealth').put(initialHealth()).then(() => undefined))
     this.use({ stack: 'dbcore', name: 'workspace-revisions', level: 0, create: revisionMiddleware })
 

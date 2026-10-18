@@ -259,3 +259,19 @@ it('does not advance export metadata if persistence fails after a browser downlo
   expect(download).toHaveBeenCalledOnce()
   expect(await health()).toEqual(before)
 })
+
+it('refuses an unsupported newer native schema without clearing, exporting or rewriting its stores', async () => {
+  const name = `unsupported-native-${newId()}`, future = new Dexie(name), current = new AccryntDatabase(name)
+  future.version(6).stores({ months:'key', obligations:'id,month,category,paidAt,debtId', transactions:'id,date,kind,category,obligationId', debts:'id', recurringRules:'id', recurringOccurrences:'id,month,ruleId,obligationId', balanceEvents:'id,debtId,recordedAt,period', backupHealth:'key', futureFinancial:'id' })
+  try {
+    await future.open()
+    const row = tx(), extra = {id:'future-only-record',amount:123}
+    await future.table('transactions').add(row); await future.table('futureFinancial').add(extra)
+    future.close()
+    await expect(current.open()).rejects.toThrow('newer or unsupported native schema')
+    current.close(); await future.open()
+    expect(await future.table('transactions').get(row.id)).toEqual(row)
+    expect(await future.table('futureFinancial').get(extra.id)).toEqual(extra)
+    expect(await future.table('backupHealth').count()).toBe(0)
+  } finally { future.close(); current.close(); await Dexie.delete(name) }
+})
