@@ -1,0 +1,29 @@
+{
+  "sourceCommit": "8d5f420bfdb5085732e0379bb8ee54305b872360",
+  "synthetic": {
+    "months": 72,
+    "obligations": 3600,
+    "transactions": 24000
+  },
+  "viewport": "1920×1080",
+  "browser": "153.0.8010.0",
+  "startupMs": [
+    412,
+    399,
+    375,
+    380,
+    398
+  ],
+  "saveToRenderMs": [
+    386,
+    290,
+    399,
+    418,
+    374
+  ],
+  "transactionSaveMs": [
+    931,
+    916,
+    923
+  ]
+}

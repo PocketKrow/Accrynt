@@ -27,7 +27,7 @@ export function obligationPayment(obligation: Obligation, transactions: Transact
   const remainingCents = obligation.paidAt ? 0 : Math.max(0, obligation.plannedCents - recordedCents)
   const paid = obligation.paidAt !== null || (recordedCents >= obligation.plannedCents && (recordedCents > 0 || obligation.plannedCents === 0))
   const scheduledCents = sum(transactions.filter(t => t.obligationId === obligation.id && t.kind !== 'income' && t.date > through).map(t => t.amountCents))
-  return { recordedCents, scheduledCents, remainingCents, paid, status: paid ? 'Paid' : recordedCents > 0 ? 'Partial' : scheduledCents > 0 ? 'Scheduled' : 'Unpaid' }
+  return { recordedCents, scheduledCents, remainingCents, manualReleasedCents: obligation.paidAt ? Math.max(0, obligation.plannedCents - recordedCents) : 0, paid, status: paid ? 'Paid' : recordedCents > 0 ? 'Partial' : scheduledCents > 0 ? 'Scheduled' : 'Unpaid' }
 }
 export type ObligationPayments = ReadonlyMap<string, ReturnType<typeof obligationPayment>>
 /** Build once for a live snapshot; each bill only scans its own linked entries. */

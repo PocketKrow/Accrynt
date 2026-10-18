@@ -61,5 +61,5 @@ it('validates link references and supports original v4, v5 roundtrip, native reo
   expect(await readWorkspace()).toEqual(before)
   db.close(); await db.open()
   expect((await db.transactions.toArray())[0].incomeOccurrenceId).toBe(o.id)
-  expect(db.verno).toBe(4)
+  expect(db.verno).toBe(5)
 })

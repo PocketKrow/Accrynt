@@ -52,7 +52,7 @@ test('income drafts close on month changes; paid bills stay separate from ledger
   await expect(page.getByRole('checkbox', { name: 'Mark Test electricity paid' })).toBeChecked()
   await expect(page.locator('.metric-card').filter({ hasText: 'Expected income' })).toContainText('$1,000.00')
   await page.goto('/#/ledger')
-  await expect(page.getByText('No recorded activity this month.', { exact: false })).toBeVisible()
+  await expect(page.getByText(/^No recorded activity in \d{4}-\d{2}\.$/)).toBeVisible()
 })
 
 test('transaction date drives obligation choices and changing to income clears the link', async ({ page }) => {

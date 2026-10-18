@@ -1,6 +1,9 @@
+import Dexie from 'dexie'
+import { validHealth, verifySnapshot, type BackupHealth } from './backup-health'
+import { financialTables } from './backup-health'
 import { monthlyInterest } from '../domain/debt'
 import { isDemo } from './workspace'
-import { db, readWorkspace } from './database'
+import { db, readWorkspace, readTrackedWorkspace } from './database'
 import { portableBackupSchema, now, type Backup } from '../domain/models'
 
 export async function exportBackup(): Promise<Backup> {
@@ -91,7 +94,7 @@ export async function restoreBackup(content: unknown) {
   const data = validateBackup(content)
   // Atomic replacement: either all tables restore or none do.
   await db.transaction('rw', db.tables, async () => {
-    for (const table of db.tables) await table.clear()
+    for (const name of financialTables) await db.table(name).clear()
     await db.months.bulkAdd(data.months)
     await db.obligations.bulkAdd(data.obligations)
     await db.transactions.bulkAdd(data.transactions)
@@ -117,4 +120,31 @@ export async function recoverySnapshot() {
   const current = { format: 'accrynt-portable', schemaVersion: 5, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(), ...await readWorkspace() }
   try { const data = validateBackup(current); serializeBackup(data); return { raw: false, data } }
   catch { return { raw: true, data: { ...current, format: 'accrynt-raw-recovery', warning: 'UNVALIDATED recovery data. Not directly restorable. Preserve this file for manual repair.' } } }
+}
+
+export async function capturePortableSnapshot() {
+  const snapshot = await readTrackedWorkspace()
+  const data = validateBackup({ format: 'accrynt-portable', schemaVersion: 5, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(), ...snapshot.data })
+  return { data, content: serializeBackup(data), health: snapshot.health }
+}
+export async function markBackupInitiated(snapshot: BackupHealth | undefined, initiatedAt: string) {
+  if (!validHealth(snapshot) || !snapshot.reliable) return
+  await db.transaction('rw', db.tables, async () => {
+    const current = await Dexie.waitFor(verifySnapshot(await readWorkspace(), await db.backupHealth.get('workspace')))
+    if (!validHealth(current) || !current.reliable || current.epoch !== snapshot.epoch || current.revision < snapshot.revision) return
+    const saved = current.exported
+    if (saved?.epoch === current.epoch && (saved.revision > snapshot.revision || (saved.revision === snapshot.revision && saved.initiatedAt >= initiatedAt))) return
+    await db.backupHealth.put({ ...current, exported: { epoch: snapshot.epoch, revision: snapshot.revision, initiatedAt } })
+  })
+}
+export async function initiatePortableDownload(filename: string, initiate = downloadFile) {
+  const snapshot = await capturePortableSnapshot()
+  initiate(filename, snapshot.content)
+  await markBackupInitiated(snapshot.health, now())
+}
+export async function snoozeBackupReminder(time = Date.now()) {
+  await db.transaction('rw', db.backupHealth, async () => {
+    const current = await db.backupHealth.get('workspace')
+    if (validHealth(current)) await db.backupHealth.put({ ...current, snoozedUntil: time + 7 * 24 * 60 * 60 * 1000 })
+  })
 }
