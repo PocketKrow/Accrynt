@@ -260,11 +260,13 @@ it('does not advance export metadata if persistence fails after a browser downlo
   expect(await health()).toEqual(before)
 })
 
-it('refuses an unsupported newer native schema without clearing, exporting or rewriting its stores', async () => {
+it('refuses an unsupported newer native schema after closing and reopening the same instance', async () => {
   const name = `unsupported-native-${newId()}`, future = new Dexie(name), current = new AccryntDatabase(name)
   future.version(6).stores({ months:'key', obligations:'id,month,category,paidAt,debtId', transactions:'id,date,kind,category,obligationId', debts:'id', recurringRules:'id', recurringOccurrences:'id,month,ruleId,obligationId', balanceEvents:'id,debtId,recordedAt,period', backupHealth:'key', futureFinancial:'id' })
   try {
+    await current.open(); current.close()
     await future.open()
+    const baselineHealth = await future.table('backupHealth').toArray()
     const row = tx(), extra = {id:'future-only-record',amount:123}
     await future.table('transactions').add(row); await future.table('futureFinancial').add(extra)
     future.close()
@@ -272,6 +274,6 @@ it('refuses an unsupported newer native schema without clearing, exporting or re
     current.close(); await future.open()
     expect(await future.table('transactions').get(row.id)).toEqual(row)
     expect(await future.table('futureFinancial').get(extra.id)).toEqual(extra)
-    expect(await future.table('backupHealth').count()).toBe(0)
+    expect(await future.table('backupHealth').toArray()).toEqual(baselineHealth)
   } finally { future.close(); current.close(); await Dexie.delete(name) }
 })

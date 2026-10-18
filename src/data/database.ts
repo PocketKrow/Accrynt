@@ -49,7 +49,7 @@ export class AccryntDatabase extends Dexie {
     })
     this.on('ready', () => {
       if (this.backendDB().version !== 50) throw new Error('This workspace uses a newer or unsupported native schema. Open it with the matching updated app, or download raw recovery data. No records were changed.')
-    })
+    }, true) // Keep the version guard across close/reopen and versionchange.
     this.on('populate', tx => tx.table('backupHealth').put(initialHealth()).then(() => undefined))
     this.use({ stack: 'dbcore', name: 'workspace-revisions', level: 0, create: revisionMiddleware })
 

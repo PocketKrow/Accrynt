@@ -30,7 +30,7 @@ Baseline before changes: lockfile `npm ci`, typecheck, **160 tests** and product
 | --- | --- |
 | Node 24.19.0 typecheck and unit/storage | Passed · **183 tests**, 15 files |
 | Node 22.23.3 typecheck and unit/storage | Passed · **183 tests**, 15 files |
-| Production build on both Node lines | Passed · 23 offline precache entries, 701.82 KiB |
+| Production build on both Node lines | Passed · 23 offline precache entries |
 | Complete browser suite on final source | **123 passed**, no retries: Chromium 60, Firefox 60, WebKit smoke 1, timezone projects 2 |
 | Diff whitespace check | Passed |
 
