@@ -47,7 +47,7 @@ async function chooseType(event: Event) {
   await nextTick()
   connectedOpen.value = true
 }
-const canRepeat = computed(() => !props.record && !props.seed && form.kind !== 'debt-payment' && !form.obligationId && !form.incomeOccurrenceId)
+const canRepeat = computed(() => !props.record && form.kind !== 'debt-payment')
 const suggestions = computed(() => {
   const sorted = [...store.transactions].sort((a,b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id))
   const unique = (key: 'name' | 'account') => [...new Set(sorted.map(t => t[key]).filter(Boolean))].slice(0, 20)
