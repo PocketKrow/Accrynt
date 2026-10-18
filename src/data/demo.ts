@@ -1,3 +1,4 @@
+import { financialTables } from './backup-health'
 import { AccryntDatabase, db } from './database'
 import { isDemo } from './workspace'
 import { localDate, type Backup, type Category } from '../domain/models'
@@ -93,7 +94,7 @@ export async function seedDemo(database = db, reference = localDate()) {
   if (database.name !== 'accrynt-demo-v1') throw new Error('Demo seeding requires the isolated demo database.')
   const fixture = demoFixture(reference)
   await database.transaction('rw', database.tables, async () => {
-    for (const table of database.tables) if (await table.count()) return
+    for (const name of financialTables) if (await database.table(name).count()) return
     await writeFixture(database, fixture)
   })
 }
@@ -101,7 +102,7 @@ export async function resetDemo(scenario: DemoScenario = 'showroom') {
   if (!isDemo || db.name !== 'accrynt-demo-v1') throw new Error('Reset is only available in the demo workspace.')
   const fixture = demoFixture(localDate(), scenario)
   await db.transaction('rw', db.tables, async () => {
-    for (const table of db.tables) await table.clear()
+    for (const name of financialTables) await db.table(name).clear()
     await writeFixture(db, fixture)
   })
 }

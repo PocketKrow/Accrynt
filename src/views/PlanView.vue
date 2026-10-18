@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEditorDraft } from '../composables/editorDraft'
 import { errorMessage } from '../domain/errors'
-import { useRoute } from 'vue-router'
+import { useRouteMonth } from '../composables/routeContext'
 import { computed, onMounted, ref, watch } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ObligationForm from '../components/ObligationForm.vue'
@@ -12,7 +12,7 @@ import { useFinanceStore } from '../stores/finance'
 import { localRepository } from '../data/repository'
 import { formatMoney, parseMoney, dueDate } from '../domain/finance'
 import type { MonthPlan, Obligation } from '../domain/models'
-const route = useRoute()
+const route = useRouteMonth()
 const store = useFinanceStore()
 let monthBaseline: MonthPlan | null = null
 const editorOpen = ref(false)
@@ -38,6 +38,7 @@ const crossMonthDates = (row: Obligation) => [...(linkedDates.value.get(row.id) 
 function pay(row: Obligation) { paying.value = row; paymentOpen.value = true }
 const query = ref('')
 const filter = ref<'all' | 'paid' | 'unpaid'>('all')
+watch(() => route.query.filter, value => { filter.value = value === 'paid' || value === 'unpaid' ? value : 'all' }, { immediate: true })
 const incomeDraft = ref('')
 const editingIncome = ref(false)
 const busy = ref(false)

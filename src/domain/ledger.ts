@@ -21,3 +21,13 @@ export function ledgerCsv(rows: Transaction[], demo = false) {
     dollars(t.amountCents), t.payment?.debtId ? dollars(t.payment.principalCents) : '', t.payment?.debtId ? dollars(t.payment.interestCents) : ''])
   return '\uFEFF' + [header, ...lines].map(line => line.map(csvText).join(',')).join('\r\n') + '\r\n'
 }
+
+/** Full matching set, independent of pagination; scheduled cash is never actual. */
+export function matchingTotals(rows: Transaction[], through: string) {
+  const totals = (items: Transaction[]) => {
+    const income = items.reduce((n, t) => n + (t.kind === 'income' ? t.amountCents : 0), 0)
+    const outflow = items.reduce((n, t) => n + (t.kind !== 'income' ? t.amountCents : 0), 0)
+    return { count: items.length, income, outflow, net: income - outflow }
+  }
+  return { actual: totals(rows.filter(t => t.date <= through)), scheduled: totals(rows.filter(t => t.date > through)) }
+}

@@ -1,14 +1,28 @@
 <script setup lang="ts">
+import { liveQuery } from 'dexie'
+import { backupFreshness, needsBackupReminder, type BackupHealth } from '../data/backup-health'
 import { errorMessage } from '../domain/errors'
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef, onMounted, onUnmounted } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import { useFinanceStore } from '../stores/finance'
-import { exportBackup, restoreBackup, readBackupFile, serializeBackup, BACKUP_MAX_BYTES, BACKUP_REVIEW_BYTES, backupSizeMessage, downloadFile, recoverySnapshot } from '../data/backup'
+import { initiatePortableDownload, snoozeBackupReminder, restoreBackup, readBackupFile, BACKUP_MAX_BYTES, BACKUP_REVIEW_BYTES, backupSizeMessage, downloadFile, recoverySnapshot } from '../data/backup'
 import { loadOctoberExample } from '../data/example'
 import type { Backup } from '../domain/models'
 import { isDemo, databaseName, workspaceUrl } from '../data/workspace'
-import { clearWorkspace } from '../data/database'
+import { clearWorkspace, readTrackedWorkspace } from '../data/database'
 const store = useFinanceStore()
+const backupHealth = shallowRef<BackupHealth>()
+let healthSubscription: { unsubscribe(): void } | undefined
+const reminderTime = ref(Date.now())
+let reminderClock: ReturnType<typeof setInterval> | undefined
+onMounted(() => {
+  healthSubscription = liveQuery(readTrackedWorkspace).subscribe({ next: snapshot => { backupHealth.value = snapshot.health }, error: () => { backupHealth.value = undefined } })
+  reminderClock = setInterval(() => { reminderTime.value = Date.now() }, 60_000)
+})
+onUnmounted(() => { clearInterval(reminderClock); healthSubscription?.unsubscribe() })
+const backupState = computed(() => backupFreshness(backupHealth.value))
+const reminder = computed(() => needsBackupReminder(backupHealth.value, store.hasAnyData, reminderTime.value))
+async function snooze() { try { await snoozeBackupReminder() } catch (e) { handleError(e) } }
 const busy = ref(false)
 const error = ref('')
 const persisted = ref<boolean | null>(null)
@@ -52,9 +66,8 @@ async function exportData() {
   if (busy.value) return
   busy.value = true; error.value = ''
   try {
-    const backup = await exportBackup()
-    downloadFile(`Accrynt-backup-${new Date().toISOString().slice(0, 10)}.json`, serializeBackup(backup))
-    store.notify('Portable JSON backup prepared. Keep another copy outside this browser.')
+    await initiatePortableDownload(`Accrynt-backup-${new Date().toISOString().slice(0, 10)}.json`)
+    store.notify('Backup download initiated. Keep a copy outside this browser.')
   } catch (e) { handleError(e) } finally { busy.value = false }
 }
 async function chooseBackup(event: Event) {
@@ -135,7 +148,7 @@ async function clearAll() {
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">BROWSER STORAGE</span><h2>Data location</h2></div></div>
       <p class="body-copy">Records stay in this browser profile on this device. Clearing site data or changing devices will not preserve them automatically.</p>
-      <details class="details-panel"><summary>Technical storage details</summary><p class="body-copy">IndexedDB via Dexie · database <code>{{ databaseName }}</code> · native schema v4 · portable backup v5. Storage belongs to this website’s origin and browser profile.</p></details>
+      <details class="details-panel"><summary>Technical storage details</summary><p class="body-copy">IndexedDB via Dexie · database <code>{{ databaseName }}</code> · native schema v5 · portable backup v5. Storage belongs to this website’s origin and browser profile.</p></details>
       <div class="setting-row"><div><strong>Storage estimate</strong><p>{{ storageEstimate }}</p></div><button class="button small" @click="storageInfo">Check</button></div>
       <div class="setting-row"><div><strong>Persistent storage</strong><p>{{ requestingPersistence ? 'Waiting for your browser’s permission decision' : persisted === true ? 'Granted' : persisted === false ? 'Not granted' : 'Not checked' }}. A request may be declined by the browser.</p></div><button class="button small" :disabled="requestingPersistence" @click="requestPersistence">{{ requestingPersistence ? 'Waiting…' : 'Request' }}</button></div>
     </section>
@@ -146,6 +159,8 @@ async function clearAll() {
       <p class="fine-print">Up to 64 MB of UTF-8 JSON; files over 15 MB need an extra validation review. Oversized exports require manual recovery and are not usable portable backups.</p>
       <details class="details-panel"><summary>Backup compatibility</summary><p class="body-copy">Exports use portable v5 and require an updated app. Older app versions cannot read v5 exports. Imports from v1–v4 remain supported.</p></details>
       <div class="data-counts"><span>{{ rowCounts.months }} months</span><span>{{ rowCounts.obligations }} obligations</span><span>{{ rowCounts.transactions }} transactions</span><span>{{ rowCounts.debts }} debts</span><span>{{ rowCounts.recurringRules }} recurring rules</span><span>{{ rowCounts.recurringOccurrences }} recurring entries</span></div>
+      <div class="backup-status" role="status"><p v-if="backupState === 'unknown'" class="body-copy">Backup freshness unknown. This browser cannot safely relate its tracking metadata to the records.</p><p v-else-if="backupState === 'never'" class="body-copy">No portable backup download initiated in this browser’s tracking history.</p><template v-else><p class="body-copy">Backup download initiated {{ backupHealth?.exported?.initiatedAt }}.</p><p class="fine-print">{{ backupState === 'current' ? 'No later tracked record changes.' : 'Records changed since that snapshot.' }}</p></template></div>
+      <div v-if="reminder" class="details-panel"><p class="body-copy">Your records have unexported changes. Consider downloading a portable backup.</p><button class="text-link" @click="snooze">Remind me in seven days</button></div>
       <button class="button primary" :disabled="busy" @click="exportData">Download JSON backup</button>
       <details class="details-panel"><summary>Recovery for damaged records</summary><p class="body-copy">If portable validation fails, preserve an unvalidated raw copy for manual repair. Raw recovery files cannot be imported directly.</p><button class="button" :disabled="busy" @click="exportRecovery">Download recovery data</button></details>
       <hr class="section-divider"/>

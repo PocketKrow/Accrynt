@@ -1,3 +1,4 @@
+import { financialTables, fingerprint, verifySnapshot, initialHealth, revisionMiddleware, type BackupHealth } from './backup-health'
 import { databaseName } from './workspace'
 import Dexie, { type Table } from 'dexie'
 import { migrateLegacyDebt } from '../domain/models'
@@ -12,6 +13,7 @@ export class AccryntDatabase extends Dexie {
   recurringOccurrences!: Table<RecurringOccurrence, string>
 
   balanceEvents!: Table<BalanceEvent, string>
+  backupHealth!: Table<BackupHealth, string>
 
   constructor(name = 'accrynt-local-v1') {
     super(name)
@@ -39,6 +41,15 @@ export class AccryntDatabase extends Dexie {
         if (row.payment) { row.payment.balanceAsOfBefore = null; row.payment.balanceAsOfAfter = null }
       })
     })
+    this.version(5).stores({ backupHealth: 'key' }).upgrade(async tx => {
+      const health = initialHealth()
+      health.fingerprints = {}
+      for (const name of financialTables) health.fingerprints[name] = await Dexie.waitFor(fingerprint(await tx.table(name).toArray()))
+      await tx.table('backupHealth').put(health)
+    })
+    this.on('populate', tx => tx.table('backupHealth').put(initialHealth()).then(() => undefined))
+    this.use({ stack: 'dbcore', name: 'workspace-revisions', level: 0, create: revisionMiddleware })
+
   }
 }
 export const db = new AccryntDatabase(databaseName)
@@ -56,6 +67,12 @@ export function readWorkspace() {
 
 export function clearWorkspace() {
   return db.transaction('rw', db.tables, async () => {
-    for (const table of db.tables) await table.clear()
+    for (const name of financialTables) await db.table(name).clear()
   })
+}
+
+/** Financial payload stays portable; browser health is read in the same snapshot separately. */
+export async function readTrackedWorkspace() {
+  const snapshot = await db.transaction('r', db.tables, async () => ({ data: await readWorkspace(), health: await db.backupHealth.get('workspace') }))
+  return { data: snapshot.data, health: await verifySnapshot(snapshot.data, snapshot.health) }
 }

@@ -31,14 +31,14 @@ it('does not create an absent database while attempting recovery', async () => {
   await expect(readRawRecovery(name)).rejects.toThrow('No existing records database')
   expect((await indexedDB.databases()).some(row => row.name === name)).toBe(false)
 })
-it('reads current native v4 records unchanged without schema validation or repair', async () => {
+it('reads current native v5 records unchanged without schema validation or repair', async () => {
   const name = `accrynt-current-recovery-${crypto.randomUUID()}`, current = new AccryntDatabase(name)
   try {
     await current.open()
     await current.months.put({ key:'2026-10', incomeCents:-1, openingCents:null, updatedAt:'2026-10-17T12:00:00.000Z' })
     const raw = await readRawRecovery(name)
-    expect(raw.nativeVersion).toBe(40)
+    expect(raw.nativeVersion).toBe(50)
     expect(raw.tables.months).toEqual(await current.months.toArray())
-    expect(Object.keys(raw.tables)).toHaveLength(7)
+    expect(Object.keys(raw.tables)).toHaveLength(8)
   } finally { current.close(); await Dexie.delete(name) }
 })

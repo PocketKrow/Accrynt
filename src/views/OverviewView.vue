@@ -5,6 +5,7 @@ import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useFinanceStore } from '../stores/finance'
 import PageHeader from '../components/PageHeader.vue'
+import CashBreakdown from '../components/CashBreakdown.vue'
 import MetricCard from '../components/MetricCard.vue'
 import ObligationForm from '../components/ObligationForm.vue'
 import TransactionForm from '../components/TransactionForm.vue'
@@ -17,6 +18,7 @@ import { localRepository } from '../data/repository'
 const store = useFinanceStore()
 let monthBaseline: MonthPlan | null = null
 const suggestion = ref<ReturnType<typeof openingSuggestion>>(null)
+const breakdown = ref<'tracked' | 'after' | 'committed' | null>(null)
 const transactionOpen = ref(false)
 const showForm = ref(false), paymentOpen = ref(false), paying = ref<Obligation | null>(null)
 const openingEditor = ref(false), openingDraft = ref(''), busy = ref(false)
@@ -66,10 +68,10 @@ const draftGuard = useEditorDraft({
   </PageHeader>
   <section v-if="!store.hasAnyData" class="panel first-run" aria-label="Get started"><h2>Set up your first month</h2><p class="body-copy">Start with money on hand, expected income, and a bill. Record deposits when they arrive. Your workspace stays on this device.</p><div class="page-actions"><button class="button" @click="!openingEditor && editOpening()">Set opening cash</button><RouterLink class="button" to="/plan?setup=income">Set expected income</RouterLink><RouterLink class="button" to="/plan?setup=bill">Add first bill</RouterLink></div></section>
   <div class="metrics-grid">
-    <MetricCard label="Tracked available" :value="amount(store.cashflow.trackedCents)" detail="Opening balance + recorded net to date" />
-    <MetricCard label="After outstanding bills" :value="amount(store.cashflow.afterBillsCents)" detail="Available less unpaid commitments" emphasis :negative="(store.cashflow.afterBillsCents ?? 0) < 0" />
+    <MetricCard label="Tracked available" :value="amount(store.cashflow.trackedCents)" detail="Opening balance + recorded net to date"><button class="text-link metric-breakdown" aria-label="View breakdown: Tracked available" @click="breakdown = 'tracked'">View breakdown</button></MetricCard>
+    <MetricCard label="After outstanding bills" :value="amount(store.cashflow.afterBillsCents)" detail="Available less unpaid commitments" emphasis :negative="(store.cashflow.afterBillsCents ?? 0) < 0"><button class="text-link metric-breakdown" aria-label="View breakdown: After outstanding bills" @click="breakdown = 'after'">View breakdown</button></MetricCard>
     <MetricCard label="Income received" :value="formatMoney(store.cashflow.receivedCents)" detail="Recorded deposits dated through today" />
-    <MetricCard label="Still committed" :value="formatMoney(store.cashflow.outstandingCents)" detail="Remaining bill amounts this month" />
+    <MetricCard label="Still committed" :value="formatMoney(store.cashflow.outstandingCents)" detail="Remaining bill amounts this month"><button class="text-link metric-breakdown" aria-label="View breakdown: Still committed" @click="breakdown = 'committed'">View breakdown</button></MetricCard>
   </div>
   <div class="cashflow-context"><p class="fine-print">{{ store.month }} · Expected income {{ formatMoney(income) }} · Recorded outflow to date {{ formatMoney(store.cashflow.spentCents) }}. Tracked estimates depend on your entries; Accrynt does not connect to a bank.</p><button class="text-link" @click="!openingEditor && editOpening()" :disabled="openingEditor">{{ store.monthData?.openingCents == null ? 'Set opening balance' : 'Edit opening balance' }}</button></div>
   <section v-if="openingEditor" class="panel inline-editor"><h2>Opening balance · {{ store.month }}-01</h2><p class="body-copy">Money on hand at the start of this month across the accounts you track. Record this month’s deposits separately in the Ledger. This amount is never carried into another month automatically.</p><div v-if="suggestion" class="opening-suggestion"><p class="body-copy">Prior recorded closing · {{ suggestion.source }} · <strong class="mono">{{ formatMoney(suggestion.cents) }}</strong>. Based only on the opening cash and dated Ledger entries saved for that completed month. Records may be incomplete. Later historical edits will not update this opening automatically.</p><button class="button small" type="button" :disabled="busy" @click="openingDraft = (suggestion.cents / 100).toFixed(2)">Use prior recorded closing</button><p class="form-hint">Review the amount, then Save opening balance to accept it.</p></div><form class="inline-form" @submit.prevent="saveOpening()"><fieldset class="editor-fields inline-fields" :disabled="busy"><label>Opening balance (USD)<input v-model="openingDraft" inputmode="decimal" required /></label><button class="button primary" :disabled="busy">Save opening balance</button><button type="button" class="button" :disabled="busy" @click="saveOpening(true)">Clear balance</button><button type="button" class="button" :disabled="busy" @click="draftGuard.close()">Cancel</button></fieldset></form></section>
@@ -84,5 +86,6 @@ const draftGuard = useEditorDraft({
   </div>
   <details class="panel budget-details"><summary>Budget breakdown · {{ formatMoney(store.summary.remainingCents) }} unallocated planned income</summary><div class="recurring-content"><p class="body-copy">Expected income minus all planned obligations. This is your budget remainder, separate from available money.</p><div class="segmented-meter" role="progressbar" :aria-valuenow="Math.round(outflowPercent)" aria-valuemin="0" :aria-valuemax="Math.max(100, Math.round(outflowPercent))" aria-label="Budget allocated"><span :style="{ width: `${Math.min(outflowPercent, 100)}%` }" /></div><div class="allocation-legend"><span>{{ outflowPercent.toFixed(1) }}% planned</span><span>{{ formatMoney(store.summary.plannedCents) }} of {{ formatMoney(income) }} expected</span></div><div class="category-breakdown"><div v-for="[category, total] in categories" :key="category" class="breakdown-row"><span>{{ category }}</span><div class="small-meter"><span :style="{ width: `${store.summary.plannedCents ? total / store.summary.plannedCents * 100 : 0}%` }" /></div><strong class="mono">{{ formatMoney(total) }}</strong></div><p v-if="!categories.length" class="empty-copy">No planned obligations yet.</p></div></div></details>
   <p class="fine-print">Bills marked paid manually stop reserving money but do not create outflow. Record missing transactions to keep available totals accurate. Future-dated entries are excluded from available money until their date.</p>
+  <CashBreakdown :section="breakdown" @close="breakdown = null" />
   <TransactionForm v-model="transactionOpen" /><ObligationForm v-model="showForm" /><PaymentForm v-model="paymentOpen" :obligation="paying" />
 </template>

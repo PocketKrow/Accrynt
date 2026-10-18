@@ -444,3 +444,10 @@ select, .table-controls input, .inline-form input, .comparison-label input {
 .inline-fields { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; width: 100%; }
 
 .first-run { margin-bottom: 16px; }
+
+.matching-summary { display: grid; gap: .5rem; padding: .75rem 0; font-size: .8rem; overflow-wrap: anywhere; }
+.matching-summary .text-link { justify-self: start; }
+.metric-breakdown { margin-top: .5rem; font-size: .75rem; }
+
+.cash-breakdown dt { overflow-wrap: anywhere; }
+.backup-status + .details-panel { margin-bottom: 12px; }

@@ -6,5 +6,6 @@ withDefaults(defineProps<{ label: string; value: string; detail: string; emphasi
     <div class="metric-label">{{ label }}</div>
     <div class="metric-value mono" :class="{ 'negative-text': negative }">{{ value }}</div>
     <p class="metric-detail">{{ detail }}</p>
+    <slot />
   </article>
 </template>
