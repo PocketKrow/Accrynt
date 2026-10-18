@@ -157,7 +157,7 @@ test('reminder snooze survives edits and reload while clean exported records sta
 test('manual paid review is bounded, explains unlinked cash, and viewing never changes records', async ({page},info) => {
   await page.clock.setFixedTime('2026-10-18T16:00:00Z')
   const data=fixture()
-  const obligations=Array.from({length:12},(_,i)=>({id:`dd000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`,month:'2026-10',name:i === 0 ? 'X'.repeat(100) : `Manual synthetic bill ${i}`,category:'Other',plannedCents:10000,dueDay:1,debtId:null,paidAt:stamp,updatedAt:stamp}))
+  const obligations=Array.from({length:12},(_,i)=>({id:`dd000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`,month:'2026-10',name:i === 0 ? 'A'.repeat(100) : `Manual synthetic bill ${i}`,category:'Other',plannedCents:10000,dueDay:1,debtId:null,paidAt:stamp,updatedAt:stamp}))
   await restore(page,{...data,transactions:[{...data.transactions[0],date:'2026-09-30',obligationId:obligations[0].id,amountCents:2000}],obligations,months:[{key:'2026-10',openingCents:0,incomeCents:0,updatedAt:stamp}]})
   await page.goto('/#/')
   await expect(metric(page,'Tracked available')).toHaveText('$0.00')
