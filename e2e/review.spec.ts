@@ -1,3 +1,4 @@
+import { populateWorkspace } from './support/workspace'
 import { Buffer } from 'node:buffer'
 import { readFileSync } from 'node:fs'
 import { test, expect, type Page, type Download } from '@playwright/test'
@@ -95,10 +96,11 @@ test('copying prior-month bills preserves explicit zero income unless the user s
 
 test('desktop disclosures retain debt context, income discovery and readable report and receipt details', async ({ page }) => {
   await fixed(page); await page.setViewportSize({width:1920,height:1080})
-  await page.goto('/?demo=1#/plan')
+  await populateWorkspace(page)
+  await page.goto('/#/plan')
   await page.getByRole('button', { name:/Review scheduled income/ }).click()
   await expect(page.getByRole('region', { name:'Scheduled income',exact:true })).toBeFocused()
-  await page.goto('/?demo=1#/debts')
+  await page.goto('/#/debts')
   const active = page.locator('.debt-card').filter({ has:page.getByRole('heading',{name:'Fictional vehicle loan',exact:true}) })
   await expect(active.locator('.debt-assumptions')).toContainText('Saved as of')
   await expect(active.locator('.debt-assumptions')).toContainText('Nominal monthly')
@@ -110,11 +112,11 @@ test('desktop disclosures retain debt context, income discovery and readable rep
   await expect(paidOff.getByText('Saved monthly payment',{exact:true})).not.toBeVisible()
   await paidOff.getByText('Historical payment terms',{exact:true}).click()
   await expect(paidOff.getByText('Saved monthly payment',{exact:true})).toBeVisible()
-  await page.goto('/?demo=1#/reports')
+  await page.goto('/#/reports')
   const partial = page.getByRole('row').filter({hasText:'2026-10'})
   await expect(partial.locator('th .cell-sub')).toHaveCSS('display','block')
   await expect(page.locator('.trend-month.is-partial .chart-period-label')).toHaveText('Partial')
-  await page.goto('/?demo=1#/ledger')
+  await page.goto('/#/ledger')
   await page.getByRole('button', {name:'Inspect Synthetic partial card payment',exact:true}).click()
   const row = page.getByRole('row').filter({hasText:'Synthetic partial card payment'})
   await expect(row.getByRole('cell',{name:'Debt payment',exact:true})).toBeVisible()

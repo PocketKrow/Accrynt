@@ -1,6 +1,6 @@
 # Security reporting and maintenance
 
-The v1 release candidate is under validation. `main` receives fixes; older builds
+The production source version is v1.0.0. `main` receives fixes; older builds
 are not promised backports. Do not downgrade an existing database to an older writer.
 
 The available contact route is [repository issues](https://github.com/PocketKrow/Accrynt/issues).

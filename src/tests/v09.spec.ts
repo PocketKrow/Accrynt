@@ -4,8 +4,8 @@ import { AccryntDatabase, db, clearWorkspace, readWorkspace, readTrackedWorkspac
 import { capturePortableSnapshot, exportBackup, initiatePortableDownload, markBackupInitiated, restoreBackup, snoozeBackupReminder } from '../data/backup'
 import { backupFreshness, financialTables, initialHealth, needsBackupReminder, BACKUP_SNOOZE_MS } from '../data/backup-health'
 import { localRepository as repo } from '../data/repository'
-import { demoFixture, seedDemo } from '../data/demo'
-import { loadOctoberExample } from '../data/example'
+import { syntheticFixture } from './fixtures/synthetic-workspace'
+import { loadOctoberExample } from './fixtures/example'
 import { matchingTotals } from '../domain/ledger'
 import { availableMoney, buildObligationPayments } from '../domain/finance'
 import { newId, now, type Transaction } from '../domain/models'
@@ -17,7 +17,7 @@ const tx = (overrides: Partial<Transaction> = {}): Transaction => ({ id: newId()
 async function expectChange(action: () => Promise<unknown>) { const before = await health(); await action(); expect((await health()).revision).toBeGreaterThan(before.revision) }
 
 it('tracks each of the seven financial tables, including implicit writes, bulk writes, edits and deletion', async () => {
-  const fixture = demoFixture('2026-10-18')
+  const fixture = syntheticFixture('2026-10-18')
   for (const name of financialTables) {
     const row = fixture[name][0]
     if (!row) throw Error(`Missing test fixture for ${name}`)
@@ -57,7 +57,7 @@ it('keeps reads, metadata updates, idempotent requests and already-generated rec
   await repo.ensureRecurringMonth('2026-10'); expect((await health()).revision).toBe(generated)
 })
 it('tracks monthly edits/copy, manual paid, linked payment/undo, adjustments/reversal and recurring skip/restore', async () => {
-  await restoreBackup(demoFixture('2026-10-18'))
+  await restoreBackup(syntheticFixture('2026-10-18'))
   await expectChange(async () => repo.saveIncome('2026-10', 123, await db.months.get('2026-10') ?? null))
   await expectChange(async () => repo.saveOpeningBalance('2026-10', 0, await db.months.get('2026-10') ?? null))
   await expectChange(() => repo.copyPreviousMonth('2026-11'))
@@ -123,7 +123,7 @@ it('tracks edits, deletion-only and same-count replacement without trusting time
   expect(backupFreshness(await health())).toBe('changed')
   await initiatePortableDownload('test.json', () => {})
   await expectChange(() => db.transactions.delete(row.id)); expect(backupFreshness(await health())).toBe('changed')
-  await restoreBackup(demoFixture('2026-10-18'))
+  await restoreBackup(syntheticFixture('2026-10-18'))
   await initiatePortableDownload('test.json', () => {})
   const portable = await exportBackup(), before = await health()
   await restoreBackup({...portable, exportedAt:'2099-01-01T00:00:00.000Z'})
@@ -157,18 +157,7 @@ it('coordinates cross-connection writers with consistent export snapshots', asyn
     expect(backupFreshness(await health())).toBe('changed')
   } finally { other.close() }
 })
-it('isolates demo health and allows initial seed exactly once', async () => {
-  const demo = new AccryntDatabase('accrynt-demo-v1')
-  try {
-    await demo.open(); const personal = await health()
-    await seedDemo(demo, '2026-10-18')
-    expect(await demo.transactions.count()).toBeGreaterThan(0)
-    const seeded = await demo.backupHealth.get('workspace')
-    await seedDemo(demo, '2026-10-18')
-    expect(await demo.backupHealth.get('workspace')).toEqual(seeded)
-    expect(await health()).toEqual(personal)
-  } finally { demo.close(); await Dexie.delete('accrynt-demo-v1') }
-})
+
 it('allows a financial-empty workspace with metadata to load the optional example', async () => {
   await loadOctoberExample('2026-10')
   expect(await db.obligations.count()).toBe(3)
@@ -212,7 +201,7 @@ it('sums every matching page and keeps future-only entries separate from actual 
   expect(matchingTotals([], '2026-10-18').actual.count).toBe(0)
 })
 it.each([null, 0, -10000])('reconciles cash and manual releases for opening %s with cross-month, scheduled, and undone outflow', opening => {
-  const fixture = demoFixture('2026-10-18'), bill = fixture.obligations.find(o=>o.month==='2026-10')!
+  const fixture = syntheticFixture('2026-10-18'), bill = fixture.obligations.find(o=>o.month==='2026-10')!
   bill.paidAt = now()
   const rows = [tx({obligationId:bill.id, date:'2026-09-30',amountCents:2000}), tx({kind:'income',amountCents:10000}), tx({obligationId:bill.id, date:'2026-11-01',amountCents:9999})]
   const states = buildObligationPayments([bill], rows, '2026-10-18')

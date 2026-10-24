@@ -3,13 +3,11 @@ import { defineStore } from 'pinia'
 import { compareTransactions } from '../domain/ledger'
 import { liveQuery } from 'dexie'
 import { db, readWorkspace } from '../data/database'
-import { seedDemo } from '../data/demo'
-import { isDemo } from '../data/workspace'
 import { currentMonth, localDate, type MonthPlan, type Obligation, type Transaction, type Debt, type RecurringRule, type RecurringOccurrence, type BalanceEvent } from '../domain/models'
 import { availableMoney, buildObligationPayments, monthlySummary, obligationPayment, sum } from '../domain/finance'
 import { localRepository } from '../data/repository'
 
-const PREF_THEME = isDemo ? 'accrynt-demo-theme-v1' : 'accrynt-theme-v1'
+const PREF_THEME = 'accrynt-theme-v1'
 function loadTheme(): 'light' | 'dark' {
   try { return localStorage.getItem(PREF_THEME) === 'dark' ? 'dark' : 'light' } catch { return 'light' }
 }
@@ -47,7 +45,6 @@ export const useFinanceStore = defineStore('finance', () => {
   const cashflow = computed(() => availableMoney(month.value, monthData.value?.openingCents ?? null, obligations.value, transactions.value, today.value, paymentStates.value))
   const hasAnyData = computed(() => months.value.length + obligations.value.length + transactions.value.length + debts.value.length + recurringRules.value.length + balanceEvents.value.length > 0)
   let generating = false, requested = false
-  let initialization: Promise<void> | null = null
   async function generateMonth(retry = false) {
     if (retry) delete recurringFailures.value[month.value]
     if (recurringFailures.value[month.value]) return
@@ -78,11 +75,8 @@ export const useFinanceStore = defineStore('finance', () => {
     today.value = localDate()
     if (clock !== null) clearInterval(clock)
     clock = setInterval(() => { today.value = localDate() }, 60_000)
-    // Seed outside liveQuery: its query context deliberately forbids writes.
-    initialization ??= isDemo ? db.open().then(() => seedDemo()) : Promise.resolve()
     subscription = liveQuery(async () => {
       await db.open()
-      await initialization
       return readWorkspace()
     }).subscribe({
       next(payload) {
@@ -101,7 +95,6 @@ export const useFinanceStore = defineStore('finance', () => {
         error.value = reason instanceof Error ? reason.message : 'Local database access failed.'
         loaded.value = true
         subscription = null
-        initialization = null
       }
     })
   }

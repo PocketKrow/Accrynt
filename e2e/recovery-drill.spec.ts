@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer'
 import { test, expect, type Page } from '@playwright/test'
-import { demoFixture } from '../src/data/demo'
+import { syntheticFixture } from '../src/tests/fixtures/synthetic-workspace'
 import { financialTables } from '../src/data/backup-health'
 import { downloadBackup, restoreFile } from './support/backup'
 
@@ -13,7 +13,7 @@ async function cash(page: Page) {
   }))
 }
 test('downloaded seven-table recovery drill restores identities, receipts and cash into a fresh profile', async ({ page, browser, playwright }, info) => {
-  const fixture = { ...demoFixture('2026-10-16'), workspace: 'personal' }
+  const fixture = { ...syntheticFixture('2026-10-16'), workspace: 'personal' }
   await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
   await restoreFile(page, Buffer.from(JSON.stringify(fixture)))
   // Exercise a new real connected operation as well as existing partial receipts,

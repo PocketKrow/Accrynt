@@ -318,13 +318,6 @@ select, .table-controls input, .inline-form input, .comparison-label input {
 .toast { pointer-events: none; }
 .toast, .update-banner { position: fixed; z-index: 90; bottom: 20px; left: 50%; transform: translateX(-50%); width: max-content; max-width: min(600px,calc(100vw - 32px)); background: #102027; color: #edf4f6; border: 1px solid #53646b; padding: 12px 16px; font-size: 12px; line-height: 1.6; box-shadow: 0 8px 32px #0004; }
 .update-banner { bottom: 80px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
-.demo-banner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; padding: 12px 16px; margin-bottom: 20px; border: 1px solid var(--line-strong); border-left: 3px solid var(--accent); background: var(--surface); font-size: 11px; }
-.demo-description, .demo-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
-.demo-description strong { font-size: 10px; letter-spacing: .06em; font-weight: 700; }
-.demo-description > span { color: var(--muted); }
-.demo-banner label { display: flex; align-items: center; gap: 8px; }
-.demo-banner select { min-height: 34px; max-width: 160px; padding: 6px 8px; font-size: 11px; }
-.demo-banner .error-message { flex-basis: 100%; margin: 0; }
 
 /* Foundry right navigation remains a stable, quiet anchor. */
 .right-rail { min-width: 0; padding: 24px 16px 16px; background: var(--rail); color: var(--rail-text); border-left: 1px solid var(--rail-line); grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 24px; }
@@ -418,9 +411,6 @@ select, .table-controls input, .inline-form input, .comparison-label input {
   .modal-actions .button { white-space: normal; }
 }
 @media (max-width: 600px) {
-  .demo-description, .demo-actions { gap: 8px 12px; }
-  .demo-actions { width: 100%; }
-  .demo-banner label { flex-wrap: wrap; }
   .scheduled-row { grid-template-columns: minmax(0,1fr); }
   .scheduled-row > .mono, .scheduled-row > div:nth-child(2) { text-align: left; }
   .navigation { grid-template-columns: repeat(2,minmax(0,1fr)); }

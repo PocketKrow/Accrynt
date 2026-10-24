@@ -15,9 +15,9 @@ function csvText(value: string) {
   return `"${safe.replace(/"/g, '""')}"`
 }
 const dollars = (cents: number) => `${Math.trunc(cents / 100)}.${String(cents % 100).padStart(2, '0')}`
-export function ledgerCsv(rows: Transaction[], demo = false) {
+export function ledgerCsv(rows: Transaction[]) {
   const header = ['Workspace', 'Date', 'Description', 'Kind', 'Category', 'Account', 'Amount USD', 'Principal USD', 'Interest USD']
-  const lines = rows.map(t => [demo ? 'DEMO · SYNTHETIC DATA' : 'Personal workspace', t.date, t.name, t.kind, t.category, t.account,
+  const lines = rows.map(t => ['Personal workspace', t.date, t.name, t.kind, t.category, t.account,
     dollars(t.amountCents), t.payment?.debtId ? dollars(t.payment.principalCents) : '', t.payment?.debtId ? dollars(t.payment.interestCents) : ''])
   return '\uFEFF' + [header, ...lines].map(line => line.map(csvText).join(',')).join('\r\n') + '\r\n'
 }

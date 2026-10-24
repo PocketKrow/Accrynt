@@ -1,3 +1,4 @@
+import { populateWorkspace } from './support/workspace'
 import { test, expect } from '@playwright/test'
 import headers from '../deployment/headers.json' with { type: 'json' }
 
@@ -12,14 +13,17 @@ test('production host contract, local-only requests and strict CSP cover all rou
     document.addEventListener('securitypolicyviolation', event => state.cspViolations.push(event.effectiveDirective))
   })
   await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
-  for (const populated of [false, true]) for (const theme of ['light', 'dark']) {
-    await page.goto(`/${populated ? '?demo=1' : ''}#/settings`)
-    await page.getByLabel('Theme', { exact: true }).selectOption(theme)
-    for (const route of ['/', '/plan', '/ledger', '/debts', '/reports', '/settings']) {
-      await page.goto(`/${populated ? '?demo=1' : ''}#${route}`)
-      await expect(page.locator('h1')).toBeVisible()
-      const directives = await page.evaluate(() => (window as typeof window & { cspViolations: string[] }).cspViolations)
-      if (directives.length) violations.push({ route, theme, populated, directives })
+  for (const populated of [false, true]) {
+    if (populated) await populateWorkspace(page)
+    for (const theme of ['light', 'dark']) {
+      await page.goto('/#/settings')
+      await page.getByLabel('Theme', { exact: true }).selectOption(theme)
+      for (const route of ['/', '/plan', '/ledger', '/debts', '/reports', '/settings']) {
+        await page.goto(`/#${route}`)
+        await expect(page.locator('h1')).toBeVisible()
+        const directives = await page.evaluate(() => (window as typeof window & { cspViolations: string[] }).cspViolations)
+        if (directives.length) violations.push({ route, theme, populated, directives })
+      }
     }
   }
   const response = await request.get('/')

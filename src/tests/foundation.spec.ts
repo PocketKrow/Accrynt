@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { AccryntDatabase, db, clearWorkspace, readWorkspace } from '../data/database'
+import { db, clearWorkspace, readWorkspace } from '../data/database'
 import { localRepository as repo } from '../data/repository'
 import { validateBackup, restoreBackup, exportBackup } from '../data/backup'
-import { demoFixture, seedDemo } from '../data/demo'
+import { syntheticFixture } from './fixtures/synthetic-workspace'
 import { availableMoney, debtProgress, monthlySummary, obligationPayment } from '../domain/finance'
 import { newId, now, type Obligation, type Transaction } from '../domain/models'
 import { projectDebt } from '../domain/debt'
@@ -38,14 +38,14 @@ describe('foundation regressions', () => {
     expect(obligationPayment(o, [t, { ...t, id: newId(), date: '2026-10-01', amountCents: 500 }], '2026-10-16').status).toBe('Partial')
   })
   it('rejects income linked to an obligation before replacing any records', async () => {
-    const fixture = demoFixture('2026-10-16'); await restoreBackup(fixture)
+    const fixture = syntheticFixture('2026-10-16'); await restoreBackup(fixture)
     const before = await readWorkspace()
     fixture.transactions.find(t => t.kind === 'income')!.obligationId = fixture.obligations[0].id
     await expect(restoreBackup(fixture)).rejects.toThrow('Income cannot')
     expect(await readWorkspace()).toEqual(before)
   })
   it('retains receipts for relinked obligations and deleted debts', async () => {
-    const fixture = demoFixture('2026-10-16'), payment = fixture.transactions.find(t => t.payment)!
+    const fixture = syntheticFixture('2026-10-16'), payment = fixture.transactions.find(t => t.payment)!
     fixture.obligations.find(o => o.id === payment.obligationId)!.debtId = fixture.debts[1].id
     expect(validateBackup(fixture).transactions.find(t => t.payment)?.payment?.debtId).toBe(fixture.debts[0].id)
     const oldId = fixture.debts[0].id
@@ -55,7 +55,7 @@ describe('foundation regressions', () => {
     await restoreBackup(fixture); expect((await exportBackup()).transactions.find(t => t.payment)?.payment?.debtId).toBe(oldId)
   })
   it('rounds progress half-up without reporting paid off with cents left', () => {
-    const d = demoFixture('2026-10-16').debts[0]
+    const d = syntheticFixture('2026-10-16').debts[0]
     expect(debtProgress({ ...d, startingBalanceCents: 40, balanceCents: 17 })).toBe(58)
     expect(debtProgress({ ...d, startingBalanceCents: 10000, balanceCents: 1 })).toBe(99)
     expect(debtProgress({ ...d, balanceCents: 0 })).toBe(100)
@@ -69,22 +69,9 @@ describe('foundation regressions', () => {
   })
 })
 
-describe('isolated deterministic demo', () => {
-  it('seeds atomically once across concurrent database connections; never changes normal records', async () => {
-    const a = new AccryntDatabase('accrynt-demo-v1'), b = new AccryntDatabase('accrynt-demo-v1')
-    await a.delete(); await a.open(); await b.open()
-    await db.obligations.add(bill()); const before = await readWorkspace()
-    try {
-      await Promise.all([seedDemo(a, '2026-10-16'), seedDemo(b, '2026-10-16')])
-      expect(await a.months.count()).toBe(6)
-      expect(await a.debts.count()).toBe(6)
-      expect(await a.obligations.count()).toBe(59)
-      expect(await readWorkspace()).toEqual(before)
-      await expect(seedDemo(db, '2026-10-16')).rejects.toThrow('isolated')
-    } finally { b.close(); await a.delete() }
-  })
+describe('deterministic synthetic test data', () => {
   it.each(['showroom','cash-shortfall','near-payoff','february'] as const)('validates and roundtrips %s fixtures', async scenario => {
-    const fixture = demoFixture('2026-10-16', scenario)
+    const fixture = syntheticFixture('2026-10-16', scenario)
     await restoreBackup(fixture)
     expect((await exportBackup()).transactions).toEqual(expect.arrayContaining(fixture.transactions))
     expect(fixture.recurringOccurrences.some(o => o.cancelled)).toBe(true)

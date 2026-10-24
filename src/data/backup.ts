@@ -2,13 +2,12 @@ import Dexie from 'dexie'
 import { validHealth, verifySnapshot, type BackupHealth } from './backup-health'
 import { financialTables } from './backup-health'
 import { monthlyInterest } from '../domain/debt'
-import { isDemo } from './workspace'
 import { db, readWorkspace, readTrackedWorkspace } from './database'
 import { portableBackupSchema, now, type Backup } from '../domain/models'
 
 export async function exportBackup(): Promise<Backup> {
   const data: Backup = {
-    format: 'accrynt-portable', schemaVersion: 5, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(),
+    format: 'accrynt-portable', schemaVersion: 5, workspace: 'personal', exportedAt: now(),
     ...await readWorkspace()
   }
   const validated = validateBackup(data)
@@ -108,7 +107,7 @@ export function downloadFile(filename: string, content: string, mime = 'applicat
   const url = URL.createObjectURL(new Blob([content], { type: mime }))
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = isDemo ? `DEMO-SYNTHETIC-${filename}` : filename
+  anchor.download = filename
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
@@ -117,14 +116,14 @@ export function downloadFile(filename: string, content: string, mime = 'applicat
 
 /** Recovery-only envelope: preserves corrupt rows without mislabelling them a portable backup. */
 export async function recoverySnapshot() {
-  const current = { format: 'accrynt-portable', schemaVersion: 5, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(), ...await readWorkspace() }
+  const current = { format: 'accrynt-portable', schemaVersion: 5, workspace: 'personal', exportedAt: now(), ...await readWorkspace() }
   try { const data = validateBackup(current); serializeBackup(data); return { raw: false, data } }
   catch { return { raw: true, data: { ...current, format: 'accrynt-raw-recovery', warning: 'UNVALIDATED recovery data. Not directly restorable. Preserve this file for manual repair.' } } }
 }
 
 export async function capturePortableSnapshot() {
   const snapshot = await readTrackedWorkspace()
-  const data = validateBackup({ format: 'accrynt-portable', schemaVersion: 5, workspace: isDemo ? 'demo-synthetic' : 'personal', exportedAt: now(), ...snapshot.data })
+  const data = validateBackup({ format: 'accrynt-portable', schemaVersion: 5, workspace: 'personal', exportedAt: now(), ...snapshot.data })
   return { data, content: serializeBackup(data), health: snapshot.health }
 }
 export async function markBackupInitiated(snapshot: BackupHealth | undefined, initiatedAt: string) {
