@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { resolve, extname } from 'node:path'
+import securityHeaders from '../deployment/headers.json' with { type: 'json' }
 
 test('production PWA update reviews a dirty form and saves before reload; updated shell works offline', async ({ page, context }) => {
   let revision = 1
@@ -14,7 +15,7 @@ test('production PWA update reviews a dirty form and saves before reload; update
       if (!file.startsWith(root + '/')) { res.writeHead(404).end(); return }
       let content = await readFile(file)
       if (pathname === '/sw.js') content = Buffer.from(content.toString() + `\n// synthetic update revision ${revision}\n`)
-      res.writeHead(200, { 'Content-Type': mime[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache' }).end(content)
+      res.writeHead(200, { ...securityHeaders, 'Content-Type': mime[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache' }).end(content)
     } catch { res.writeHead(404).end() }
   })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))

@@ -1,0 +1,133 @@
+{
+  "synthetic": {
+    "months": 72,
+    "obligations": 3600,
+    "transactions": 24000
+  },
+  "viewport": "1920×1080",
+  "browser": "153.0.8010.0",
+  "startupMs": [
+    942,
+    411,
+    396,
+    551,
+    396,
+    350,
+    376
+  ],
+  "saveToRenderMs": [
+    302,
+    389,
+    436,
+    319,
+    425,
+    325,
+    401
+  ],
+  "transactionSaveMs": [
+    930,
+    929,
+    938,
+    927,
+    931,
+    932,
+    936
+  ],
+  "stages": {
+    "monthly": [
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 68000000
+      }
+    ],
+    "transaction": [
+      {
+        "totalsMs": {},
+        "longTasksMs": [
+          79,
+          88
+        ],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [
+          94,
+          98
+        ],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [
+          91,
+          89
+        ],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [
+          86,
+          89
+        ],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [
+          97,
+          82
+        ],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [
+          86,
+          81
+        ],
+        "heapBytes": 68000000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [
+          97,
+          95
+        ],
+        "heapBytes": 68000000
+      }
+    ]
+  }
+}

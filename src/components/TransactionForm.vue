@@ -87,7 +87,7 @@ const draftGuard = useEditorDraft({
       <div class="modal-heading"><h2>{{ record ? 'Edit transaction' : 'Record a transaction' }}</h2><button class="icon-button" aria-label="Close" :disabled="busy" @click="draftGuard.close()">✕</button></div>
       <form @submit.prevent="submit()"><fieldset class="editor-fields" :disabled="busy">
         <label>Date<input v-model="form.date" type="date" required /></label>
-        <label>Description<input ref="descriptionInput" list="transaction-descriptions" v-model="form.name" required maxlength="100" placeholder="Groceries, deposit, credit payment…" /></label>
+        <label>Description<input ref="descriptionInput" list="transaction-descriptions" v-model="form.name" required autofocus maxlength="100" placeholder="Groceries, deposit, credit payment…" /></label>
         <label>Type<select :value="form.kind" @change="chooseType"><option value="expense">Expense</option><option value="income">Income</option><option v-if="!record" value="connected">Debt payment · update balance</option><option value="debt-payment">Debt outflow only · balance unchanged</option></select></label>
         <label v-if="form.kind === 'income'">Scheduled income link (optional)<select v-model="form.incomeOccurrenceId"><option value="">Unlinked deposit</option><option v-for="item in incomeChoices" :key="item.id" :value="item.id">{{ item.month }} · {{ item.name }}{{ item.cancelled ? ' · skipped plan' : '' }}</option></select></label>
         <p v-if="form.kind === 'income'" class="form-hint">Choose the plan entry this deposit belongs to. Link an existing Ledger deposit here instead of recording it twice. Partial, multiple and extra receipts are allowed. The monthly plan amount stays unchanged.</p>

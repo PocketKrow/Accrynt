@@ -1,0 +1,112 @@
+{
+  "synthetic": {
+    "months": 6,
+    "obligations": 60,
+    "transactions": 240
+  },
+  "viewport": "1920×1080",
+  "browser": "153.0.8010.0",
+  "startupMs": [
+    101,
+    99,
+    108,
+    140,
+    113,
+    104,
+    97
+  ],
+  "saveToRenderMs": [
+    81,
+    75,
+    71,
+    72,
+    73,
+    61,
+    75
+  ],
+  "transactionSaveMs": [
+    93,
+    112,
+    84,
+    113,
+    150,
+    71,
+    80
+  ],
+  "stages": {
+    "monthly": [
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      }
+    ],
+    "transaction": [
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      },
+      {
+        "totalsMs": {},
+        "longTasksMs": [],
+        "heapBytes": 12700000
+      }
+    ]
+  }
+}

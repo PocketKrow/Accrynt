@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+// Use Zod's interpreted validators under the production no-eval CSP. Configure
+// before constructing schemas so its feature probe does not emit CSP violations.
+z.config({ jitless: true })
+
 const id = z.string().uuid()
 const money = z.number().int().min(0).max(999_999_999_99)
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
