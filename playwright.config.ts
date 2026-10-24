@@ -21,7 +21,10 @@ export default defineConfig({
       // Resolve the native permission dialog in disposable test profiles only.
       launchOptions: { firefoxUserPrefs: { 'permissions.default.persistent-storage': 1 } }
     } },
-    { name: 'webkit-smoke', testMatch: '**/webkit-smoke.spec.ts', use: { ...devices['Desktop Safari'] } },
+    { name: 'webkit-smoke', testMatch: [
+      '**/webkit-smoke.spec.ts', '**/connected.spec.ts', '**/recovery-drill.spec.ts', '**/security.spec.ts',
+      '**/webkit-reliability.spec.ts'
+    ], use: { ...devices['Desktop Safari'] } },
     ...(['America/New_York', 'Pacific/Auckland'] as const).map((timezoneId, index) => ({
       name: index === 0 ? 'new-york' : 'auckland', testMatch: '**/date-boundary.spec.ts',
       use: { ...devices['Desktop Firefox'], timezoneId }

@@ -80,7 +80,8 @@ export async function fingerprint(rows: unknown[]) {
   const canonical = (value: unknown): unknown => {
     if (Array.isArray(value)) return value.map(canonical)
     if (value && typeof value === 'object') {
-      const record = value as Record<string, unknown>, keys = Object.keys(record), shape = keys.join('\0')
+      // JSON encodes the key list unambiguously, including damaged/raw keys with NULs.
+      const record = value as Record<string, unknown>, keys = Object.keys(record), shape = JSON.stringify(keys)
       let ordered = shapes.get(shape)
       if (!ordered) { ordered = keys.sort(); shapes.set(shape, ordered) }
       return Object.fromEntries(ordered.map(key => [key, canonical(record[key])]))

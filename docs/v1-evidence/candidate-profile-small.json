@@ -1,0 +1,266 @@
+{
+  "synthetic": {
+    "months": 6,
+    "obligations": 60,
+    "transactions": 240
+  },
+  "viewport": "1920×1080",
+  "browser": "153.0.8010.0",
+  "startupMs": [
+    99,
+    96,
+    95,
+    96,
+    110,
+    91,
+    93
+  ],
+  "saveToRenderMs": [
+    70,
+    72,
+    72,
+    75,
+    77,
+    72,
+    73
+  ],
+  "transactionSaveMs": [
+    73,
+    86,
+    83,
+    86,
+    70,
+    68,
+    73
+  ],
+  "stages": {
+    "monthly": [
+      {
+        "totalsMs": {
+          "profile:write-transaction": 14.600000000093132,
+          "profile:mutation-table-reads": 0.6000000000931323,
+          "profile:mutation-read-before": 0.39999999990686774,
+          "profile:canonical-encode": 0.09999999986030161,
+          "profile:sha256": 0.20000000018626451,
+          "profile:mutation-write": 0.39999999990686774,
+          "profile:snapshot-refresh": 5.199999999953434,
+          "profile:snapshot-to-frame": 22,
+          "profile:buildObligationPayments": 0.09999999986030161,
+          "profile:monthlySummary": 0.09999999986030161
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 15,
+          "profile:mutation-table-reads": 0.5999999998603016,
+          "profile:mutation-read-before": 0.39999999990686774,
+          "profile:canonical-encode": 0.10000000009313226,
+          "profile:sha256": 0.20000000018626451,
+          "profile:mutation-write": 0.5,
+          "profile:snapshot-refresh": 5.300000000046566,
+          "profile:buildObligationPayments": 0.10000000009313226,
+          "profile:monthlySummary": 0.10000000009313226,
+          "profile:snapshot-to-frame": 22.699999999953434
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 17.5999999998603,
+          "profile:mutation-table-reads": 0.6999999999534339,
+          "profile:mutation-read-before": 0.30000000004656613,
+          "profile:canonical-encode": 0.20000000018626451,
+          "profile:sha256": 0.19999999972060323,
+          "profile:mutation-write": 1.6999999999534339,
+          "profile:snapshot-refresh": 7.600000000093132,
+          "profile:snapshot-to-frame": 17.800000000046566,
+          "profile:buildObligationPayments": 0.10000000009313226,
+          "profile:monthlySummary": 0.10000000009313226
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 19,
+          "profile:mutation-table-reads": 3.9000000001396984,
+          "profile:mutation-read-before": 3.6000000000931323,
+          "profile:canonical-encode": 0.19999999995343387,
+          "profile:sha256": 0.09999999986030161,
+          "profile:mutation-write": 0.2999999998137355,
+          "profile:snapshot-refresh": 9.200000000186265,
+          "profile:monthlySummary": 0.19999999995343387,
+          "profile:snapshot-to-frame": 30.5999999998603,
+          "profile:buildObligationPayments": 0
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 14.800000000046566,
+          "profile:mutation-table-reads": 1.2000000001862645,
+          "profile:mutation-read-before": 0.8000000000465661,
+          "profile:canonical-encode": 0.2999999998137355,
+          "profile:sha256": 0.10000000009313226,
+          "profile:mutation-write": 0.5,
+          "profile:snapshot-refresh": 6.199999999953434,
+          "profile:snapshot-to-frame": 17.600000000093132,
+          "profile:buildObligationPayments": 0,
+          "profile:monthlySummary": 0
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 15.5,
+          "profile:mutation-table-reads": 0.6999999999534339,
+          "profile:mutation-read-before": 0.5,
+          "profile:canonical-encode": 0.10000000009313226,
+          "profile:sha256": 0.30000000004656613,
+          "profile:mutation-write": 0.5,
+          "profile:snapshot-refresh": 6.699999999953434,
+          "profile:snapshot-to-frame": 20,
+          "profile:buildObligationPayments": 0.10000000009313226,
+          "profile:monthlySummary": 0.10000000009313226
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 13.800000000046566,
+          "profile:mutation-table-reads": 0.7999999998137355,
+          "profile:mutation-read-before": 0.5,
+          "profile:canonical-encode": 0,
+          "profile:sha256": 0.19999999995343387,
+          "profile:mutation-write": 1.6999999999534339,
+          "profile:snapshot-refresh": 6.399999999906868,
+          "profile:monthlySummary": 0.19999999995343387,
+          "profile:snapshot-to-frame": 19.899999999906868,
+          "profile:buildObligationPayments": 0
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      }
+    ],
+    "transaction": [
+      {
+        "totalsMs": {
+          "profile:write-transaction": 21.799999999813735,
+          "profile:mutation-table-reads": 4.100000000093132,
+          "profile:mutation-read-before": 2.4000000001396984,
+          "profile:canonical-encode": 1.6000000000931323,
+          "profile:sha256": 0.19999999995343387,
+          "profile:mutation-write": 0.5,
+          "profile:snapshot-refresh": 9.299999999813735,
+          "profile:snapshot-to-frame": 27,
+          "profile:buildObligationPayments": 0.10000000009313226,
+          "profile:monthlySummary": 0.19999999995343387
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 23.0999999998603,
+          "profile:mutation-table-reads": 4.199999999953434,
+          "profile:mutation-read-before": 2.5,
+          "profile:canonical-encode": 0.8999999999068677,
+          "profile:sha256": 0.19999999995343387,
+          "profile:mutation-write": 0.5,
+          "profile:snapshot-refresh": 11.400000000139698,
+          "profile:snapshot-to-frame": 24.699999999953434,
+          "profile:buildObligationPayments": 0.09999999986030161,
+          "profile:monthlySummary": 0.19999999995343387
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 21,
+          "profile:mutation-table-reads": 4.399999999906868,
+          "profile:mutation-read-before": 2.699999999953434,
+          "profile:canonical-encode": 1.1999999999534339,
+          "profile:sha256": 0.10000000009313226,
+          "profile:mutation-write": 0.5,
+          "profile:snapshot-refresh": 11.799999999813735,
+          "profile:snapshot-to-frame": 26.9000000001397,
+          "profile:buildObligationPayments": 0.09999999986030161,
+          "profile:monthlySummary": 0.19999999995343387
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 21.200000000186265,
+          "profile:mutation-read-before": 2.0999999998603016,
+          "profile:mutation-table-reads": 4,
+          "profile:canonical-encode": 1.0000000002328306,
+          "profile:sha256": 0.5999999998603016,
+          "profile:mutation-write": 0.30000000004656613,
+          "profile:snapshot-refresh": 9.099999999860302,
+          "profile:snapshot-to-frame": 29.200000000186265,
+          "profile:buildObligationPayments": 0.09999999986030161,
+          "profile:monthlySummary": 0.09999999986030161
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 20,
+          "profile:mutation-table-reads": 4.2000000001862645,
+          "profile:mutation-read-before": 2.300000000046566,
+          "profile:canonical-encode": 0.8999999999068677,
+          "profile:sha256": 0.2999999998137355,
+          "profile:mutation-write": 0.39999999990686774,
+          "profile:snapshot-refresh": 11.599999999860302,
+          "profile:buildObligationPayments": 0.20000000018626451,
+          "profile:monthlySummary": 0.20000000018626451,
+          "profile:snapshot-to-frame": 27.600000000093132
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 20.799999999813735,
+          "profile:mutation-table-reads": 4.2000000001862645,
+          "profile:mutation-read-before": 2.5,
+          "profile:canonical-encode": 1.2999999998137355,
+          "profile:sha256": 0.39999999990686774,
+          "profile:mutation-write": 0.39999999990686774,
+          "profile:snapshot-refresh": 11.399999999906868,
+          "profile:snapshot-to-frame": 27.199999999953434,
+          "profile:buildObligationPayments": 0,
+          "profile:monthlySummary": 0.10000000009313226
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      },
+      {
+        "totalsMs": {
+          "profile:write-transaction": 19.699999999953434,
+          "profile:mutation-table-reads": 4.099999999860302,
+          "profile:mutation-read-before": 2.3999999999068677,
+          "profile:canonical-encode": 0.8999999999068677,
+          "profile:sha256": 0.19999999995343387,
+          "profile:mutation-write": 0.4000000001396984,
+          "profile:snapshot-refresh": 8.300000000046566,
+          "profile:snapshot-to-frame": 31.0999999998603,
+          "profile:buildObligationPayments": 0.10000000009313226,
+          "profile:monthlySummary": 0.19999999995343387
+        },
+        "longTasksMs": [],
+        "heapBytes": 13400000
+      }
+    ]
+  }
+}
