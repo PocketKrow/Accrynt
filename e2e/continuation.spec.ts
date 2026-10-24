@@ -1,3 +1,4 @@
+import { populateWorkspace } from './support/workspace'
 import { test, expect, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 async function fixed(page: Page) { await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z')) }
@@ -97,14 +98,15 @@ test('damaged current state yields labelled raw recovery before confirmed repair
   expect(download.suggestedFilename()).toContain('RAW-RECOVERY')
   expect(JSON.parse(readFileSync(path,'utf8'))).toMatchObject({ format:'accrynt-raw-recovery',months:[{incomeCents:-1}] })
   expect(confirmations).toHaveLength(2)
-  await expect(page.getByRole('button', { name:'Load selected-month example' })).toBeVisible()
+  await expect(page.locator('.data-counts')).toContainText('0 transactions')
 })
 test('overflow scope, aligned report tracks and local fonts remain usable offline', async ({ page }) => {
-  await fixed(page); await page.goto('/?demo=1#/')
+  await populateWorkspace(page)
+  await fixed(page); await page.goto('/#/')
   await expect(page.getByText('Showing 6 of 7 outstanding', { exact: false })).toBeVisible()
   await expect(page.getByRole('heading', { name:'Other months · upcoming saved obligations' })).not.toBeVisible()
   await expect(page.getByText('No upcoming obligations saved for other months.', { exact:true })).toBeVisible()
-  await page.goto('/?demo=1#/reports')
+  await page.goto('/#/reports')
   await page.evaluate(() => document.fonts.ready)
   expect(await page.evaluate(() => [...document.fonts].some(f=>f.family === 'Inter' && f.status === 'loaded'))).toBe(true)
   const positions = await page.locator('.category-breakdown .small-meter').evaluateAll(nodes => nodes.map(n=>({x:n.getBoundingClientRect().x,width:n.getBoundingClientRect().width})))
@@ -119,7 +121,8 @@ test('overflow scope, aligned report tracks and local fonts remain usable offlin
   expect(await page.evaluate(()=>document.fonts.check('400 14px "JetBrains Mono"'))).toBe(true)
 })
 test('prior-month posted interest is suggested once and the retained-date editor warning is visible', async ({ page }) => {
-  await fixed(page); await page.goto('/?demo=1#/debts')
+  await populateWorkspace(page)
+  await fixed(page); await page.goto('/#/debts')
   const card = page.locator('.debt-card').filter({has:page.getByRole('heading',{name:'Fictional personal loan',exact:true})})
   await card.getByRole('button',{name:'Edit ↗'}).click()
   const editor = page.getByRole('dialog',{name:'Debt',exact:true})

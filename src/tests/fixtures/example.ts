@@ -1,6 +1,6 @@
-import { financialTables } from './backup-health'
-import { db } from './database'
-import { newId, now, type Category } from '../domain/models'
+import { financialTables } from '../../data/backup-health'
+import { db } from '../../data/database'
+import { newId, now, type Category } from '../../domain/models'
 
 /** Small fictional selected-month example; normal workspaces never seed automatically. */
 export async function loadOctoberExample(month: string) {

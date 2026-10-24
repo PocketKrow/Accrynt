@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './support/workspace'
 import { readFileSync } from 'node:fs'
 test('exact 6.125% persists and dated estimates never change the saved balance', async({page})=>{
  await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
- await page.goto('/?demo=1#/debts')
+ await page.goto('/#/debts')
  const card=page.locator('.debt-card').filter({has:page.getByRole('heading',{name:'Fictional vehicle loan',exact:true})})
  await expect(card).toContainText('6.125%');await expect(card).toContainText('$43.26')
  await card.getByRole('button',{name:'Edit ↗'}).click()
@@ -19,7 +19,7 @@ test('exact 6.125% persists and dated estimates never change the saved balance',
 })
 test('posted interest is explicit, payment allocation uses it once, reversal follows balance order',async({page})=>{
  await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
- await page.goto('/?demo=1#/debts')
+ await page.goto('/#/debts')
  const card=page.locator('.debt-card').filter({has:page.getByRole('heading',{name:'Fictional personal loan',exact:true})})
  await card.getByRole('button',{name:'Adjust balance',exact:true}).click()
  const adjust=page.getByRole('dialog',{name:'Adjust debt balance'})
@@ -41,31 +41,31 @@ test('posted interest is explicit, payment allocation uses it once, reversal fol
  page.once('dialog',d=>d.accept());await event.getByRole('button',{name:/Reverse interest/}).click()
  await expect(page.getByRole('alert')).toContainText('latest debt balance event')
  await page.getByRole('button',{name:'Dismiss error'}).click()
- await page.goto('/?demo=1#/ledger')
+ await page.goto('/#/ledger')
  const row=page.getByRole('row').filter({hasText:'Synthetic posted-interest payment'})
  page.once('dialog',d=>d.accept());await row.getByRole('button',{name:/Undo payment/}).click();await expect(row).not.toBeVisible()
- await page.goto('/?demo=1#/debts');await card.getByText('Balance adjustment history · 2',{exact:true}).click()
+ await page.goto('/#/debts');await card.getByText('Balance adjustment history · 2',{exact:true}).click()
  page.once('dialog',d=>d.accept());await event.getByRole('button',{name:/Reverse interest/}).click()
  await expect(card.locator('.debt-balance')).toHaveText('$3,890.00');await expect(event).toContainText('reversed')
  await card.getByRole('button',{name:'Adjust balance',exact:true}).click();await adjust.getByLabel('Adjustment type').selectOption('interest');await adjust.getByLabel('Audit note').fill('Synthetic monthly interest')
  await adjust.getByRole('button',{name:'Confirm balance adjustment'}).click();await expect(adjust.getByRole('alert')).toContainText('already used')
 })
-test('original v3 import previews age and downloads current recovery data before replacing demo records',async({page})=>{
+test('original v3 import previews age and downloads current recovery data before replacing existing records',async({page})=>{
  await page.clock.setFixedTime(new Date('2026-10-16T20:00:00Z'))
- await page.goto('/?demo=1#/settings')
+ await page.goto('/#/settings')
  const original=JSON.parse(readFileSync(new URL('../src/tests/fixtures/v3-original-export.json',import.meta.url),'utf8'))
  original.exportedAt='2026-01-01T00:00:00.000Z'
  await page.getByLabel('Select an Accrynt backup file').setInputFiles({name:'legacy-v3.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(original))})
  await expect(page.getByText('Validated backup:',{exact:false})).toBeVisible();await expect(page.getByRole('alert').filter({hasText:'newer records'})).toBeVisible()
- await expect(page.getByRole('alert').filter({hasText:'Cross-workspace restore'})).toBeVisible()
+ await expect(page.getByRole('alert').filter({hasText:'synthetic example data'})).not.toBeVisible()
  const recovery=page.waitForEvent('download');page.once('dialog',d=>d.accept())
  await page.getByRole('button',{name:'Replace local records with backup'}).click()
- expect((await recovery).suggestedFilename()).toContain('DEMO-SYNTHETIC-Accrynt-before-restore')
- await page.goto('/?demo=1#/debts')
+ expect((await recovery).suggestedFilename()).toContain('Accrynt-before-restore')
+ await page.goto('/#/debts')
  const card=page.locator('.debt-card');await expect(card).toHaveCount(1);await expect(card).toContainText('Historical fixture loan');await expect(card.locator('.debt-balance')).toHaveText('$910.00');await expect(card).toContainText('12%')
 })
 test('known zero APR keeps suggesting zero on subsequent payments while unknown APR stays blank',async({page})=>{
- await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'));await page.goto('/?demo=1#/debts')
+ await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'));await page.goto('/#/debts')
  const zero=page.locator('.debt-card').filter({has:page.getByRole('heading',{name:'Fictional promotion · 0%',exact:true})})
  const dialog=page.getByRole('dialog',{name:'Record payment',exact:true})
  await zero.getByRole('button',{name:'Record payment',exact:true}).click();await expect(dialog.getByLabel('Interest included in payment (USD)')).toHaveValue('0.00')

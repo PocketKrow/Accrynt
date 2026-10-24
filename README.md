@@ -1,12 +1,14 @@
-# Accrynt · v1 release candidate
+# Accrynt · v1.0.0
 
 A personal, local-first finance workspace built with **Vue 3, Vite, TypeScript, SCSS, Pinia, Vue Router, Dexie/IndexedDB and Zod**. Carbon × Glacier Refinement 02 retains the compact full-viewport workspace, geometric A identity, light/dark themes and right desktop navigation. Its six sections are Overview, Monthly Plan, Ledger, Debts, Reports and Settings. No accounts, backend, analytics or bank connection.
 
-**1.0.0-rc.1 is a candidate, not public v1 approval.** It is a USD workspace for
-manual planning and recorded money movements. Account labels are descriptive,
-not separate balances or a transfer system. Physical-device, manual accessibility,
-production-origin and owner-trial gates remain in the [v1 QA matrix](docs/QA-v1.md).
-See [candidate changes](docs/RELEASE-NOTES-v1.md), [recovery/moving records](docs/RECOVERY.md),
+**1.0.0** is the production source version requested by the owner. It is a USD
+workspace for manual planning and recorded money movements. Account labels are
+not separate balances or a transfer system. The demo and sample-data controls have
+been removed; a new profile starts empty. Physical-device, manual accessibility,
+production-host and normal-use checks remain explicitly unverified in the
+[v1 QA matrix](docs/QA-v1.md). Version promotion does not certify those checks.
+See [release changes](docs/RELEASE-NOTES-v1.md), [recovery/moving records](docs/RECOVERY.md),
 [deployment checks](docs/DEPLOYMENT.md) and [security reporting](SECURITY.md).
 
 The intended browser scope is current Chromium/Firefox desktop and Safari/iOS,
@@ -82,7 +84,7 @@ Debt payoff uses nominal monthly APR/12, rounded half up per period, with capped
 
 ## Storage, backups and recovery
 
-Records belong to the exact website origin and browser profile. Domains, ports, localhost/127.0.0.1 and browsers have separate stores. Personal data stays in **`accrynt-local-v1`**; demo uses **`accrynt-demo-v1`**. Native Dexie schema **v5** appends one local backup-health store; all seven financial tables and historical v1–v4 migrations remain intact. Only theme preferences use localStorage; no financial payloads or drafts are placed there.
+Records belong to the exact website origin and browser profile. Domains, ports, localhost/127.0.0.1 and browsers have separate stores. Personal data stays in **`accrynt-local-v1`**. Old demo databases are left untouched and are never opened or copied into production. Native Dexie schema **v5** appends one local backup-health store; all seven financial tables and historical v1–v4 migrations remain intact. Only theme preferences use localStorage; no financial payloads or drafts are placed there.
 
 Portable JSON remains **`accrynt-portable` v5**, with v1–v4 import support. Local revision/backup-health metadata is excluded. Export validates data and enforces **64,000,000 UTF-8 bytes**. File selection checks that limit before reading; files above **15,000,000 bytes** require extra review. Restore validates IDs, links, recurrence keys and receipt arithmetic before replacing all financial tables atomically. A current safety download is initiated before confirmed restore/clear. Backups are unencrypted.
 
@@ -96,17 +98,22 @@ Browser clearing, eviction or profile removal can remove records. Persistent-sto
 
 ## Offline operation and draft protection
 
-A production app visited online can reload offline once its service worker activates and controls navigation. `npm run dev` is not the offline target. Updates use an explicit reload action. Dirty modal/inline forms share **Save and continue**, **Discard changes**, and **Keep editing** across close/Escape, routes/months, demo reset and PWA updates. Clean forms do not prompt. Busy operations block leaving; failed saves retain drafts. Save and continue always performs normal save/close, even when repeat entry is available.
+A production app visited online can reload offline once its service worker activates and controls navigation. `npm run dev` is not the offline target. Updates use an explicit reload action. Dirty modal/inline forms share **Save and continue**, **Discard changes**, and **Keep editing** across close/Escape, routes/months and PWA updates. Clean forms do not prompt. Busy operations block leaving; failed saves retain drafts. Save and continue always performs normal save/close, even when repeat entry is available.
 
 Native `beforeunload` protects ordinary reload/close where supported and after qualifying interaction. Browsers control the wording. It cannot guarantee mobile OS process termination, every mobile close path or a custom save flow. Drafts stay in memory and are not automatically persisted.
 
-## Synthetic demo and release evidence
+## Production workspace and release evidence
 
-Choose **Try demo**, or open `http://127.0.0.1:4173/?demo=1#/` after `npm run build` and `npm run preview`. The same forms, calculations and repository seed six months of fictional records once. Edits persist; confirmed Reset demo selects showroom, negative-cash, near-payoff or February scenarios. Existing demos are never automatically reseeded. Returning to the personal workspace neither copies nor clears its data. Demo backup filenames say `DEMO-SYNTHETIC`; theme and backup metadata are isolated too.
+Only the personal workspace is available. Old `?demo=1` links do not switch stores
+or insert fictional records. The personal database name, theme key and financial
+schemas stay unchanged. No existing database is deleted. Previously downloaded
+synthetic-labelled backups remain supported by the validator and carry an explicit
+warning before replacement. Synthetic datasets are test fixtures only; browser QA
+imports them deliberately into disposable profiles through the regular restore UI.
 
 [v0.9 QA and scope matrix](docs/QA-v0.9.md) records actual checks, compatibility, performance and focused before/after evidence. Historical evidence remains in the earlier QA files. Physical phones, real 200%/400% browser zoom, manual screen readers and Safari/iOS PWA/storage are separate manual release gates. Automated WebKit smoke and emulated widths do not certify them.
 
-The current [v1 QA/release matrix](docs/QA-v1.md) supersedes historical counts and
+The [v1 QA/release matrix](docs/QA-v1.md) supersedes historical counts and
 records the performance decision, fresh-profile recovery drill, strict-CSP browser
 coverage and exact remaining gates. Local-first does not mean encryption or
 protection from someone using an unlocked profile. The website host may retain
@@ -117,4 +124,4 @@ updates and read-only PR dependency review are configured; fixes require review 
 No project license has been selected. Owner licensing approval remains a separate
 distribution decision; the bundled third-party font notices are preserved.
 
-No new top-level section, backend, bank/cloud sync, AI assistant, chart dependency, account-transfer subsystem, encryption project or Tauri build is included. Domain/storage boundaries remain suitable for a later Tauri 2/SQLite adapter. This milestone does not authorize merging, deployment, releases, licensing or repository-setting changes.
+No new top-level section, backend, bank/cloud sync, AI assistant, chart dependency, account-transfer subsystem, encryption project or Tauri build is included. Domain/storage boundaries remain suitable for a later Tauri 2/SQLite adapter. This source promotion does not publish a tag, deploy hosting, select a license or change repository permissions.

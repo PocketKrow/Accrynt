@@ -23,7 +23,7 @@ export default defineConfig({
     } },
     { name: 'webkit-smoke', testMatch: [
       '**/webkit-smoke.spec.ts', '**/connected.spec.ts', '**/recovery-drill.spec.ts', '**/security.spec.ts',
-      '**/webkit-reliability.spec.ts'
+      '**/webkit-reliability.spec.ts', '**/production.spec.ts'
     ], use: { ...devices['Desktop Safari'] } },
     ...(['America/New_York', 'Pacific/Auckland'] as const).map((timezoneId, index) => ({
       name: index === 0 ? 'new-york' : 'auckland', testMatch: '**/date-boundary.spec.ts',

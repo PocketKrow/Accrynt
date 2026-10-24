@@ -2,8 +2,6 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRegisterSW } from 'virtual:pwa-register/vue'
-import DemoControls from './components/DemoControls.vue'
-import { isDemo, workspaceUrl } from './data/workspace'
 import BrandMark from './components/BrandMark.vue'
 import StorageRecovery from './components/StorageRecovery.vue'
 import { useFinanceStore } from './stores/finance'
@@ -58,11 +56,9 @@ onUnmounted(() => { if (noticeTimer) clearTimeout(noticeTimer) })
       </div>
       <div class="workspace">
         <main id="main-content" class="main-content" tabindex="-1">
-          <DemoControls v-if="isDemo" />
           <div class="topbar">
             <span class="crumb">ACCRYNT / <strong>{{ active.toUpperCase() }}</strong></span>
             <div class="topbar-actions">
-              <a v-if="!isDemo" class="text-link" :href="workspaceUrl(true)">Try demo</a>
               <span class="local-indicator"><span class="dot" /> ON THIS DEVICE</span>
               <span class="top-month mono">{{ monthLabel }}</span>
               <button class="button small" type="button" :aria-label="modeLabel" @click="store.setTheme(store.theme === 'dark' ? 'light' : 'dark')">{{ store.theme === 'dark' ? '☀ Light' : '◐ Dark' }}</button>

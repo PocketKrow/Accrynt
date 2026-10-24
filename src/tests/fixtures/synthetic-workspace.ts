@@ -1,14 +1,11 @@
-import { financialTables } from './backup-health'
-import { AccryntDatabase, db } from './database'
-import { isDemo } from './workspace'
-import { localDate, type Backup, type Category } from '../domain/models'
-import { dueDate, shiftMonth } from '../domain/finance'
-import { validateBackup } from './backup'
+import { localDate, type Backup, type Category } from '../../domain/models'
+import { dueDate, shiftMonth } from '../../domain/finance'
+import { validateBackup } from '../../data/backup'
 
-// Stable synthetic UUIDs: repeat entry/reset is reproducible, never derived from personal data.
+// Stable synthetic UUIDs: fixture restoration is reproducible, never derived from personal data.
 const id = (n: number) => `de000000-0000-4000-8000-${String(n).padStart(12, '0')}`
-export type DemoScenario = 'showroom' | 'cash-shortfall' | 'near-payoff' | 'february'
-export function demoFixture(reference = localDate(), scenario: DemoScenario = 'showroom'): Backup {
+export type SyntheticScenario = 'showroom' | 'cash-shortfall' | 'near-payoff' | 'february'
+export function syntheticFixture(reference = localDate(), scenario: SyntheticScenario = 'showroom'): Backup {
   if (scenario === 'february') reference = `${reference.slice(0,4)}-02-28`
   const month = scenario === 'february' ? `${reference.slice(0, 4)}-02` : reference.slice(0, 7)
   const stamp = `${reference}T12:00:00.000Z`
@@ -82,27 +79,4 @@ export function demoFixture(reference = localDate(), scenario: DemoScenario = 's
   data.transactions.forEach(t => { if (t.obligationId === skipped.obligationId) t.obligationId = null })
   skipped.cancelled = true; skipped.obligationId = null
   return validateBackup(data)
-}
-
-async function writeFixture(database: AccryntDatabase, fixture: Backup) {
-  await database.months.bulkAdd(fixture.months); await database.obligations.bulkAdd(fixture.obligations)
-  await database.transactions.bulkAdd(fixture.transactions); await database.debts.bulkAdd(fixture.debts)
-  await database.balanceEvents.bulkAdd(fixture.balanceEvents)
-  await database.recurringRules.bulkAdd(fixture.recurringRules); await database.recurringOccurrences.bulkAdd(fixture.recurringOccurrences)
-}
-export async function seedDemo(database = db, reference = localDate()) {
-  if (database.name !== 'accrynt-demo-v1') throw new Error('Demo seeding requires the isolated demo database.')
-  const fixture = demoFixture(reference)
-  await database.transaction('rw', database.tables, async () => {
-    for (const name of financialTables) if (await database.table(name).count()) return
-    await writeFixture(database, fixture)
-  })
-}
-export async function resetDemo(scenario: DemoScenario = 'showroom') {
-  if (!isDemo || db.name !== 'accrynt-demo-v1') throw new Error('Reset is only available in the demo workspace.')
-  const fixture = demoFixture(localDate(), scenario)
-  await db.transaction('rw', db.tables, async () => {
-    for (const name of financialTables) await db.table(name).clear()
-    await writeFixture(db, fixture)
-  })
 }

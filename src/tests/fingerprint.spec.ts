@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { fingerprint } from '../data/backup-health'
-import { demoFixture } from '../data/demo'
+import { syntheticFixture } from './fixtures/synthetic-workspace'
 
 // Independent original algorithm: persisted witnesses must survive this update.
 async function originalFingerprint(rows: unknown[]) {
@@ -13,7 +13,7 @@ async function originalFingerprint(rows: unknown[]) {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
 }
 it('preserves persisted witnesses for all seven tables, receipts and nested unusual JSON properties', async () => {
-  for (const rows of Object.values(demoFixture('2026-10-16')).filter(Array.isArray)) expect(await fingerprint(rows)).toBe(await originalFingerprint(rows))
+  for (const rows of Object.values(syntheticFixture('2026-10-16')).filter(Array.isArray)) expect(await fingerprint(rows)).toBe(await originalFingerprint(rows))
   const rows = [JSON.parse('{"__proto__":{"z":1,"a":2},"10":"ten","2":"two","nested":[null,{"é":"鳥","a":0}]}'), { omitted: undefined, array: [undefined, NaN], negative: -0 }]
   expect(await fingerprint(rows)).toBe(await originalFingerprint(rows))
   expect(await fingerprint([{ z: 1, a: 2 }])).toBe(await fingerprint([{ a: 2, z: 1 }]))

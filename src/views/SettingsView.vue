@@ -6,9 +6,8 @@ import { computed, ref, shallowRef, onMounted, onUnmounted } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import { useFinanceStore } from '../stores/finance'
 import { initiatePortableDownload, snoozeBackupReminder, restoreBackup, readBackupFile, BACKUP_MAX_BYTES, BACKUP_REVIEW_BYTES, backupSizeMessage, downloadFile, recoverySnapshot } from '../data/backup'
-import { loadOctoberExample } from '../data/example'
 import type { Backup } from '../domain/models'
-import { isDemo, databaseName, workspaceUrl } from '../data/workspace'
+import { databaseName } from '../data/workspace'
 import { clearWorkspace, readTrackedWorkspace } from '../data/database'
 const store = useFinanceStore()
 const backupHealth = shallowRef<BackupHealth>()
@@ -36,8 +35,8 @@ const restoreAgeWarning = computed(() => {
   const newest = [...store.months, ...store.obligations, ...store.transactions, ...store.debts, ...store.recurringRules, ...store.recurringOccurrences].map(r => r.updatedAt).concat(store.balanceEvents.flatMap(e => [e.recordedAt, e.reversedAt ?? e.recordedAt])).sort().at(-1)
   return newest && newest > readyBackup.value.exportedAt ? 'This backup was exported before your newest local changes. Restoring will replace those newer records.' : ''
 })
-const provenanceWarning = computed(() => readyBackup.value && readyBackup.value.workspace !== (isDemo ? 'demo-synthetic' : 'personal')
-  ? `Cross-workspace restore: ${readyBackup.value.workspace === 'demo-synthetic' ? 'synthetic demo data' : 'personal records'} will replace this ${isDemo ? 'demo' : 'personal'} workspace.` : '')
+const provenanceWarning = computed(() => readyBackup.value?.workspace === 'demo-synthetic'
+  ? 'This backup is labelled synthetic example data. Restoring it will replace your personal records.' : '')
 async function safetySnapshot(action: string) {
   const snapshot = await recoverySnapshot()
   if (snapshot.raw && !confirm('Current records fail backup validation. An UNVALIDATED raw recovery download will be initiated for manual repair; it cannot be restored directly. Continue with the confirmed replacement/deletion?')) return false
@@ -119,13 +118,6 @@ async function requestPersistence() {
     store.notify(persisted.value ? 'The browser granted persistent storage.' : 'The browser did not grant persistent storage. Back up your data regularly.')
   } catch (e) { handleError(e) } finally { requestingPersistence.value = false }
 }
-async function loadSample() {
-  if (busy.value) return
-  if (!confirm('Load fictional example bills into the selected month? The example is only allowed in an empty database.')) return
-  busy.value = true; error.value = ''
-  try { await loadOctoberExample(store.month); store.notify('Fictional example bills loaded in the selected month.') }
-  catch (e) { handleError(e) } finally { busy.value = false }
-}
 async function clearAll() {
   if (busy.value) return
   if (!confirm('Delete ALL Accrynt records stored in this browser? Export a backup first. This cannot be undone.')) return
@@ -175,11 +167,6 @@ async function clearAll() {
       <button v-if="readyBackup" class="button danger-button" :disabled="busy" @click="restore">Replace local records with backup</button>
     </section>
     <section class="panel"><div class="panel-heading"><div><span class="eyebrow">WORKSPACE TOOLS</span><h2>Local controls</h2></div></div>
-      <p v-if="isDemo" class="body-copy">This synthetic workspace uses the same local workflows. Use Reset demo above to reload a scenario or Return to my workspace to leave the sandbox.</p><p v-else class="body-copy">Use Try demo for a fully interactive synthetic workspace. The small selected-month example adds fictional bills. It can only be added to an entirely empty workspace and never loads automatically.</p>
-      <a v-if="!isDemo" class="button" :href="workspaceUrl(true)">Try demo</a>
-      <button v-if="!store.hasAnyData" class="button" :disabled="busy" @click="loadSample">Load selected-month example</button>
-      <p v-else-if="!isDemo" class="muted small-text">Example import is disabled because this workspace already has data.</p>
-      <hr class="section-divider"/>
       <p class="body-copy">A current downloadable safety snapshot is prepared before deletion. Permanent deletion affects only the current browser's Accrynt database; existing downloaded backups are unaffected.</p>
       <button class="button danger-button" :disabled="busy || !store.hasAnyData" @click="clearAll">Delete all local records</button>
     </section>

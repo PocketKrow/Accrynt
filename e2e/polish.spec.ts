@@ -1,34 +1,34 @@
 import { Buffer } from 'node:buffer'
-import { test, expect } from '@playwright/test'
+import { test, expect } from './support/workspace'
 
 test('desktop controls, row actions, settings stacks and report baselines stay aligned in both themes', async ({page}) => {
   await page.clock.setFixedTime('2026-10-16T16:00:00Z')
   await page.setViewportSize({width:1920,height:1080})
   for (const theme of ['light','dark']) {
-    await page.goto('/?demo=1#/settings')
+    await page.goto('/#/settings')
     await page.getByLabel('Theme',{exact:true}).selectOption(theme)
-    await page.goto('/?demo=1#/')
+    await page.goto('/#/')
     await page.evaluate(()=>document.fonts.ready)
     const controls = await page.locator('.page-tools').evaluate(node => [...node.children].map(n=>{const r=n.getBoundingClientRect();return {center:r.y+r.height/2,x:r.x,right:r.right}}))
     expect(controls).toHaveLength(2)
     expect(Math.abs(controls[0].center-controls[1].center)).toBeLessThan(1)
     expect(controls[1].x-controls[0].right).toBeLessThanOrEqual(20)
-    await page.goto('/?demo=1#/plan')
+    await page.goto('/#/plan')
     const edits = await page.getByRole('button',{name:/^Edit Fictional/}).evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().x))
     expect(edits.length).toBeGreaterThan(5)
     expect(Math.max(...edits)-Math.min(...edits)).toBeLessThan(1)
-    await page.goto('/?demo=1#/settings')
+    await page.goto('/#/settings')
     const panel = (name:string) => page.locator('section.panel').filter({has:page.getByRole('heading',{name,exact:true})})
     const appearance = (await panel('Interface').boundingBox())!, storage = (await panel('Data location').boundingBox())!, backup = (await panel('Backup & restore').boundingBox())!
     expect(storage.x).toBeCloseTo(appearance.x,1)
     expect(storage.y-appearance.y-appearance.height).toBeGreaterThanOrEqual(12)
     expect(storage.y-appearance.y-appearance.height).toBeLessThanOrEqual(20)
     expect(backup.y).toBeCloseTo(appearance.y,1)
-    await page.goto('/?demo=1#/reports')
+    await page.goto('/#/reports')
     const bars = await page.locator('.trend-bars').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return{bottom:r.bottom,height:r.height}}))
     expect(bars).toHaveLength(6)
     for(const bar of bars) { expect(bar.bottom).toBeCloseTo(bars[0].bottom,1);expect(bar.height).toBeCloseTo(bars[0].height,1) }
-    await page.goto('/?demo=1#/debts')
+    await page.goto('/#/debts')
     const actions = page.locator('.debt-card-actions').first()
     const pay = (await actions.getByRole('button',{name:'Record payment',exact:true}).boundingBox())!, adjust = (await actions.getByRole('button',{name:'Adjust balance',exact:true}).boundingBox())!
     expect(adjust.x-pay.x-pay.width).toBeGreaterThanOrEqual(8)
@@ -39,7 +39,7 @@ test('desktop controls, row actions, settings stacks and report baselines stay a
 test('narrow tables scroll with the keyboard without widening the page', async ({page}) => {
   await page.clock.setFixedTime('2026-10-16T16:00:00Z')
   await page.setViewportSize({width:320,height:800})
-  await page.goto('/?demo=1#/plan')
+  await page.goto('/#/plan')
   const table = page.getByRole('region',{name:'Planned payments table',exact:true})
   await table.focus();await expect(table).toBeFocused()
   await page.keyboard.press('ArrowRight')

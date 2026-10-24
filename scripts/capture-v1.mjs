@@ -1,3 +1,4 @@
+import { populateWorkspace } from './synthetic-workspace.mjs'
 // Review all six routes with synthetic/empty storage; screenshots are disposable QA artifacts.
 import { chromium, expect } from '@playwright/test'
 import { preview } from 'vite'
@@ -12,7 +13,8 @@ try {
     const page = await context.newPage(), errors = []
     page.on('pageerror', error => errors.push(error.message))
     await page.clock.setFixedTime(new Date('2026-10-16T16:00:00Z'))
-    const base = `http://127.0.0.1:4188/${populated ? '?demo=1' : ''}`
+    const base = 'http://127.0.0.1:4188/'
+    if (populated) await populateWorkspace(page, 'http://127.0.0.1:4188')
     for (const theme of ['light', 'dark']) {
       await page.goto(`${base}#/settings`)
       await page.getByLabel('Theme', { exact: true }).selectOption(theme)
