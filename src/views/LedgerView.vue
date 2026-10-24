@@ -4,7 +4,6 @@ import { errorMessage } from '../domain/errors'
 import { computed, ref, watch } from 'vue'
 import { compareTransactions, matchingTotals, ledgerCsv, transactionKindLabel, formatRecordedAt } from '../domain/ledger'
 import { downloadFile } from '../data/backup'
-import { isDemo } from '../data/workspace'
 import PageHeader from '../components/PageHeader.vue'
 import MetricCard from '../components/MetricCard.vue'
 import TransactionForm from '../components/TransactionForm.vue'
@@ -36,7 +35,7 @@ const visibleRows = computed(() => rows.value.slice(page.value * pageSize, (page
 watch([query, scope, kind, () => store.month], () => { page.value = 0 })
 watch(pageCount, count => { page.value = Math.min(page.value, count - 1) })
 watch(visibleRows, current => { if (!current.some(t => t.id === selectedId.value)) selectedId.value = null })
-function exportCsv() { downloadFile(`Accrynt-ledger-${scope.value === 'month' ? store.month : 'all-time'}.csv`, ledgerCsv(rows.value, isDemo), 'text/csv;charset=utf-8') }
+function exportCsv() { downloadFile(`Accrynt-ledger-${scope.value === 'month' ? store.month : 'all-time'}.csv`, ledgerCsv(rows.value), 'text/csv;charset=utf-8') }
 function open(record: Transaction | null = null) { editing.value = record; editor.value = true }
 async function remove(record: Transaction) {
   if (!confirm(`Delete transaction "${record.name}"? This cannot be undone except by restoring a backup.`)) return

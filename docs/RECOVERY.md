@@ -26,8 +26,8 @@ Storage belongs to the exact origin (scheme, hostname and port) and profile. A n
 PocketRelik subdomain, another browser, `localhost` instead of `127.0.0.1`, or HTTPS
 instead of HTTP creates a separate store. **A redirect does not migrate IndexedDB.**
 The final production hostname is not yet confirmed. Keep access to the original
-origin until migration and external backup verification are complete. Personal and
-synthetic demo stores are separate; review cross-workspace warnings carefully.
+origin until migration and external backup verification are complete. Production uses only the personal store. Old demo databases are left untouched;
+legacy synthetic-labelled backups retain an explicit replacement warning.
 
 ## When storage or an upgrade fails
 

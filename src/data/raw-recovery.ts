@@ -1,5 +1,5 @@
 import { now } from '../domain/models'
-import { databaseName, isDemo } from './workspace'
+import { databaseName } from './workspace'
 
 /** Read the existing native version without running Dexie's application migrations. */
 export function readRawRecovery(name = databaseName) {
@@ -43,7 +43,7 @@ export function readRawRecovery(name = databaseName) {
       const tables: Record<string, unknown[]> = Object.create(null)
       const result = () => ({
         format: 'accrynt-raw-recovery' as const,
-        exportedAt: now(), workspace: isDemo ? 'demo-synthetic' as const : 'personal' as const,
+        exportedAt: now(), workspace: 'personal' as const,
         databaseName: name, nativeVersion: database.version,
         warning: 'UNVALIDATED native records. Not directly restorable. Preserve this file for manual repair. Native versions are not portable backup versions.',
         tables

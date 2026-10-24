@@ -18,9 +18,9 @@ export function historyRows(end: string, count: number, months: MonthPlan[], obl
 }
 
 /** Only validated month keys, internally computed numeric amounts and fixed labels enter this export. */
-export function historyCsv(rows: ReturnType<typeof historyRows>, demo = false) {
+export function historyCsv(rows: ReturnType<typeof historyRows>) {
   const dollars = (cents:number|null) => cents===null ? '' : `${cents<0?'-':''}${Math.trunc(Math.abs(cents)/100)}.${String(Math.abs(cents)%100).padStart(2,'0')}`
   const lines = [['Workspace','Month','Expected income USD','Planned outflow USD','Received USD','Actual outflow USD','Actual net USD'],
-    ...rows.map(r=>[demo?'DEMO · SYNTHETIC DATA':'Personal workspace',r.month,dollars(r.expectedCents),dollars(r.plannedCents),dollars(r.incomeCents),dollars(r.outflowCents),dollars(r.netCents)])]
+    ...rows.map(r=>['Personal workspace',r.month,dollars(r.expectedCents),dollars(r.plannedCents),dollars(r.incomeCents),dollars(r.outflowCents),dollars(r.netCents)])]
   return '\uFEFF'+lines.map(line=>line.map(value=>`"${value.replace(/"/g,'""')}"`).join(',')).join('\r\n')+'\r\n'
 }

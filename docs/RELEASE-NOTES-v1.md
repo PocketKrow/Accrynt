@@ -1,6 +1,23 @@
-# Accrynt 1.0.0-rc.1
+# Accrynt 1.0.0
 
-Candidate prepared 24 October 2026. Not a published tag/release or final v1 approval.
+Production source promotion requested by the owner on 24 October 2026. This updates
+`main`; it does not publish a GitHub release/tag or deploy a host.
+
+- Removed the demo, its navigation/reset controls, optional sample loading, automatic
+  synthetic seeding, demo theme selection and demo CSV/download naming.
+- Production always opens the existing personal database. Legacy demo query strings
+  do not seed or switch storage. Existing personal records/themes and old demo
+  databases are preserved; no database is deleted or silently imported.
+- Moved synthetic datasets and example-writing helpers to test fixtures. Browser
+  regression tests now import synthetic data through the standard restore flow.
+- Kept legacy synthetic-labelled backup import compatibility and its warning.
+- Promoted package/app/lockfile metadata to 1.0.0 by explicit owner instruction.
+
+The WebKit 27.2 native-select CSP warning and real-device/accessibility/production-host
+checks documented in QA-v1.md remain unresolved. Version promotion does not mean
+those checks passed. Final exact-commit CI evidence is recorded in the production PR.
+
+## Hardening included from 1.0.0-rc.1
 
 - Added a restrictive, provider-neutral production header/cache contract and a
   read-only post-deployment checker. Production preview now exercises that contract.
@@ -29,7 +46,7 @@ limitation requiring representative-device acceptance, not a promised speedup.
 
 The six-section Carbon × Glacier workspace, integer-cent accounting, explicit
 income/payment semantics, historical receipts, atomic replacement, undo ordering,
-demo isolation, forward-only migrations and explicit PWA updates remain intact.
+personal-storage continuity, forward-only migrations and explicit PWA updates remain intact.
 
 Known limits: USD only, descriptive account labels, manual planning, no bank/cloud
 sync, no automatic opening-cash rollover or interest posting, memory-only drafts,
@@ -38,6 +55,5 @@ Downloads do not prove external saving. Raw recovery is unvalidated and not dire
 importable. Real Safari/iOS, phone inputs/resume, actual 200%/400% zoom, manual screen
 readers, production headers/cache/update/migration and owner trial remain required
 gates in [QA-v1.md](QA-v1.md). The production hostname/provider, private security
-reporting route and project license still require owner decisions. No infrastructure
-was activated and no merge, deployment, DNS change, tag, release or permissions
-change was performed.
+reporting route and project license still require owner decisions. Only the owner-authorized source merge is included. No infrastructure activation,
+deployment, DNS change, tag/release or permissions change is included.

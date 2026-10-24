@@ -1,3 +1,4 @@
+import { populateWorkspace } from './support/workspace'
 import { test, expect, type Page, type Download } from '@playwright/test'
 import { Buffer } from 'node:buffer'
 const stamp = '2026-10-16T16:00:00.000Z'
@@ -139,11 +140,12 @@ test('ordinary debt-payment entry connects principal once and the explicit outfl
 })
 
 test('skipped bills restore explicitly across two tabs and reload without recovering old payment links', async ({ page, context }) => {
-  await fixed(page); await page.goto('/?demo=1#/plan')
+  await populateWorkspace(page)
+  await fixed(page); await page.goto('/#/plan')
   const bill = page.getByRole('row').filter({ hasText: 'Fictional utilities' })
   await expect(bill).toBeVisible()
   page.once('dialog', d => d.accept()); await bill.getByRole('button', { name: 'Delete Fictional utilities', exact: true }).click()
-  const other = await context.newPage(); await fixed(other); await other.goto('/?demo=1#/plan')
+  const other = await context.newPage(); await fixed(other); await other.goto('/#/plan')
   for (const tab of [page, other]) {
     await tab.getByRole('region', { name: 'Skipped bills', exact: true }).getByRole('button', { name: 'Restore Fictional utilities', exact: true }).click()
     const dialog = tab.getByRole('dialog', { name: 'Restore skipped bill', exact: true })
@@ -154,7 +156,7 @@ test('skipped bills restore explicitly across two tabs and reload without recove
   await Promise.all([page, other].map(tab => tab.getByRole('button', { name: 'Restore bill', exact: true }).click()))
   for (const tab of [page, other]) await expect(tab.getByRole('dialog', { name: 'Restore skipped bill', exact: true })).not.toBeVisible()
   await page.reload(); await expect(page.getByRole('row').filter({ hasText: 'Fictional utilities' })).toHaveCount(1)
-  await page.goto('/?demo=1#/settings')
+  await page.goto('/#/settings')
   const data = JSON.parse((await download(page)).toString('utf8'))
   const restored = data.obligations.filter((b: { name: string; month: string }) => b.name === 'Fictional utilities' && b.month === '2026-10')
   expect(restored).toHaveLength(1); expect(restored[0].paidAt).toBeNull()

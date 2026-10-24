@@ -1,7 +1,8 @@
+import { populateWorkspace } from './support/workspace'
 import { Buffer } from 'node:buffer'
 import { test, expect, type Page } from '@playwright/test'
 
-async function demo(page:Page, route='/ledger') { await page.clock.setFixedTime('2026-10-18T16:00:00Z'); await page.goto(`/?demo=1#${route}`); await expect(page.getByRole('heading',{name:route==='/settings'?'Settings':route==='/'?'October at a glance':'Ledger',exact:true})).toBeVisible() }
+async function populated(page:Page, route='/ledger') { await page.clock.setFixedTime('2026-10-18T16:00:00Z'); await populateWorkspace(page, '2026-10-18'); await page.goto(`/#${route}`); await expect(page.getByRole('heading',{name:route==='/settings'?'Settings':route==='/'?'October at a glance':'Ledger',exact:true})).toBeVisible() }
 const metric = (page:Page, name:string) => page.locator('.metric-card').filter({has:page.getByText(name,{exact:true})}).locator('.metric-value')
 async function restore(page:Page, payload:unknown) {
   await page.goto('/#/settings')
@@ -49,7 +50,7 @@ test('matching totals cover all pages and separate actual/scheduled scope, empty
 })
 
 test('cash breakdown has exact metrics, bounded manual review, context links and focus return', async ({page}) => {
-  await demo(page,'/')
+  await populated(page,'/')
   const after = await metric(page,'After outstanding bills').innerText()
   const trigger=page.getByRole('button',{name:'View breakdown: After outstanding bills',exact:true})
   await trigger.focus(); await page.keyboard.press('Enter')
@@ -62,7 +63,7 @@ test('cash breakdown has exact metrics, bounded manual review, context links and
   await dialog.getByRole('link',{name:'View all outstanding bills · 2026-10',exact:true}).click()
   await expect(page).toHaveURL(/month=2026-10.*filter=unpaid/)
   await expect(page.getByLabel('Filter payment status')).toHaveValue('unpaid')
-  await page.goto('/?demo=1#/')
+  await page.goto('/#/')
   await page.getByRole('button',{name:'View breakdown: Tracked available',exact:true}).click()
   await page.getByRole('link',{name:'+ Recorded income · selected month',exact:true}).click()
   await expect(page.getByLabel('Transaction type')).toHaveValue('income')
@@ -70,7 +71,7 @@ test('cash breakdown has exact metrics, bounded manual review, context links and
 })
 
 test('ordinary repeated entry retains convenient fields, clears links and draft, and default save closes', async ({page}) => {
-  await demo(page)
+  await populated(page)
   await page.getByRole('button',{name:'+ Record transaction',exact:true}).click()
   const dialog=page.getByRole('dialog',{name:'Transaction',exact:true})
   await dialog.getByLabel('Date',{exact:true}).fill('2026-09-12')
@@ -104,7 +105,7 @@ test('ordinary repeated entry retains convenient fields, clears links and draft,
 })
 
 test('shared save and continue closes repeat-capable entry and completes navigation', async ({page}) => {
-  await demo(page)
+  await populated(page)
   await page.getByRole('button',{name:'+ Record transaction',exact:true}).click()
   const dialog=page.getByRole('dialog',{name:'Transaction',exact:true})
   await dialog.getByLabel('Description',{exact:true}).fill('Synthetic guarded save')
@@ -117,7 +118,7 @@ test('shared save and continue closes repeat-capable entry and completes navigat
 })
 
 test('portable health responds to cross-tab mutations, deletion and restore without leaking into downloads', async ({page,context}) => {
-  await demo(page,'/settings')
+  await populated(page,'/settings')
   await expect(page.locator('.backup-status')).toContainText('No portable backup download initiated')
   const downloading=page.waitForEvent('download');await page.getByRole('button',{name:'Download JSON backup',exact:true}).click()
   const file=await downloading, stream=await file.createReadStream();if(!stream)throw Error('Missing JSON')
@@ -125,7 +126,7 @@ test('portable health responds to cross-tab mutations, deletion and restore with
   const content=Buffer.concat(chunks).toString(), portable=JSON.parse(content)
   expect(portable.schemaVersion).toBe(5);expect(content).not.toContain('backupHealth');expect(content).not.toContain('initiatedAt')
   await expect(page.locator('.backup-status')).toContainText('No later tracked record changes.')
-  const other=await context.newPage();await other.goto('/?demo=1#/ledger')
+  const other=await context.newPage();await other.goto('/#/ledger')
   await other.getByRole('button',{name:'+ Record transaction',exact:true}).click()
   const dialog=other.getByRole('dialog',{name:'Transaction',exact:true})
   await dialog.getByLabel('Description',{exact:true}).fill('Cross tab freshness')
@@ -140,11 +141,11 @@ test('portable health responds to cross-tab mutations, deletion and restore with
   page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Replace local records with backup',exact:true}).click()
   await expect(page.getByRole('button',{name:'Replace local records with backup',exact:true})).not.toBeVisible()
   await expect(page.locator('.backup-status')).toContainText('Records changed since that snapshot.')
-  await page.goto('/#/settings');await expect(page.locator('.backup-status')).toContainText('No portable backup download initiated')
+  await page.reload();await expect(page.locator('.backup-status')).toContainText('Records changed since that snapshot.')
 })
 
 test('reminder snooze survives edits and reload while clean exported records stay quiet', async ({page}) => {
-  await demo(page,'/settings')
+  await populated(page,'/settings')
   const reminder=page.getByRole('button',{name:'Remind me in seven days',exact:true})
   await expect(reminder).toBeVisible();await reminder.click();await expect(reminder).not.toBeVisible()
   await page.reload();await expect(reminder).not.toBeVisible()
@@ -177,7 +178,7 @@ test('manual paid review is bounded, explains unlinked cash, and viewing never c
 })
 
 test('repeat save failure keeps the draft for retry and successful repetitions have distinct IDs', async ({page}) => {
-  await demo(page)
+  await populated(page)
   await page.getByRole('button',{name:'+ Record transaction',exact:true}).click()
   const dialog=page.getByRole('dialog',{name:'Transaction',exact:true})
   await dialog.getByLabel('Description',{exact:true}).fill('Synthetic failed repeat')
@@ -205,7 +206,7 @@ test('repeat save failure keeps the draft for retry and successful repetitions h
 })
 
 test('ordinary linked entries can repeat without carrying bill or scheduled-income associations', async ({page}) => {
-  await demo(page)
+  await populated(page)
   await page.getByRole('button',{name:'+ Record transaction',exact:true}).click()
   const dialog=page.getByRole('dialog',{name:'Transaction',exact:true})
   await dialog.getByLabel('Description',{exact:true}).fill('Synthetic linked repeat bill')
@@ -227,7 +228,7 @@ test('ordinary linked entries can repeat without carrying bill or scheduled-inco
   await expect(incomeLink).toHaveValue('')
   await dialog.getByRole('button',{name:'Cancel',exact:true}).click()
   await expect(dialog).not.toBeVisible()
-  await page.goto('/?demo=1#/settings')
+  await page.goto('/#/settings')
   const downloading=page.waitForEvent('download');await page.getByRole('button',{name:'Download JSON backup',exact:true}).click()
   const stream=await (await downloading).createReadStream();if(!stream)throw Error('No backup stream')
   const chunks:Buffer[]=[];for await(const chunk of stream)chunks.push(Buffer.from(chunk))

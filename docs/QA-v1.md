@@ -1,10 +1,23 @@
-# v1 candidate validation and release gates
+# v1 validation evidence and outstanding checks
 
 Prepared 24 October 2026. Baseline main: `e2014085c484d6f26995a0be8bf2f574d925831c`.
 No applicable AGENTS.md was found in the checkout/its task ancestors. No open issues
 or PRs were returned when work began. The final exact delivery SHA, tree comparison
 and remote CI links are recorded in the PR because this report belongs to that tree.
-This is **1.0.0-rc.1**, not a public-v1 sign-off.
+The original evidence below describes **1.0.0-rc.1**. On 24 October the owner
+explicitly requested removing the demo and promoting production **1.0.0** to main.
+The production change removes demo/sample controls, seeding and workspace switching,
+moves synthetic data into test-only fixtures and retains legacy backup provenance
+validation. Personal storage identifiers and schemas are unchanged; old demo stores
+are not opened, copied or deleted. Tests now seed disposable profiles by portable
+restore. The removed seed-once unit tests cover a feature that no longer ships;
+financial, receipt, restore, rollback and stale-writer tests remain.
+
+Local production typecheck/build and **183 unit/storage tests / 16 files** pass.
+Final browser counts, exact SHA and merge evidence are recorded in the production
+PR after CI. This owner-authorized version promotion does **not** mark the remaining
+WebKit, physical-device, accessibility or live-host checks as passed. The manual
+matrix below remains an honest record of outstanding validation.
 
 ## Automated evidence
 

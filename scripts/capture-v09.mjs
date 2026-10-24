@@ -1,3 +1,4 @@
+import { populateWorkspace } from './synthetic-workspace.mjs'
 import { chromium } from '@playwright/test'
 import { preview } from 'vite'
 import { mkdir } from 'node:fs/promises'
@@ -11,13 +12,14 @@ const errors = []
 page.on('pageerror', e => errors.push(e.message))
 try {
   await page.clock.setFixedTime('2026-10-18T16:00:00Z')
+  await populateWorkspace(page, 'http://127.0.0.1:4173', '2026-10-18')
   for (const theme of ['light', 'dark']) {
-    await page.goto('http://127.0.0.1:4173/?demo=1#/settings')
+    await page.goto('http://127.0.0.1:4173/#/settings')
     await page.getByLabel('Theme', { exact:true }).selectOption(theme)
     for (const width of [320, 390, 1920]) {
       await page.setViewportSize({ width, height: width === 1920 ? 1080 : 850 })
       for (const [name, route] of [['overview','/'], ['ledger','/ledger'], ['settings','/settings'], ['entry','/ledger']]) {
-        await page.goto(`http://127.0.0.1:4173/?demo=1#${route}`)
+        await page.goto(`http://127.0.0.1:4173/#${route}`)
         await page.locator('.metric-card, .data-counts').first().waitFor()
         await page.evaluate(() => document.fonts.ready)
         if (name === 'entry') await page.getByRole('button', {name:'+ Record transaction',exact:true}).click()
