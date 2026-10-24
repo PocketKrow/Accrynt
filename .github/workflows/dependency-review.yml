@@ -1,4 +1,4 @@
-name: Review dependencies
+name: Review dependency advisories
 on: pull_request
 permissions:
   contents: read
@@ -8,7 +8,11 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
+      - uses: actions/setup-node@v4
         with:
-          fail-on-severity: low
-          comment-summary-in-pr: never
+          node-version: 24
+          cache: npm
+      # Dependency graph is disabled on this repository. Audit the complete
+      # resolved lockfile without requiring that API or changing repo settings.
+      - run: npm ci --ignore-scripts
+      - run: npm audit --audit-level=low

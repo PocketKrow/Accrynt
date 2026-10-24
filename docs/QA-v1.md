@@ -21,6 +21,14 @@ This is **1.0.0-rc.1**, not a public-v1 sign-off.
 | Advisory review | Two vulnerable transitive **build-time** packages reached through vite-plugin-pwa → workbox-build: fast-uri via ajv and serialize-javascript via the terser plugin. Browser financial input is not supplied to these tools. Targeted compatible resolved updates only; fresh audit evidence is in `v1-evidence/advisories-{before,after}.json` |
 | Source privacy/security inspection | No application fetch/outbound endpoint, remote executable/font import, console financial logging, v-html or innerHTML sink found in src. Local-only request checks complement that inspection, not a live-host log audit. Existing JSON UTF-8/receipt/link and CSV formula-boundary tests retained |
 
+The first remote dependency-review-action run reported that Dependency graph is
+disabled and its API is unsupported for this repository. It was replaced with a
+read-only PR workflow that installs the resolved lockfile without lifecycle scripts
+and runs `npm audit --audit-level=low` across runtime and tooling dependencies.
+This checks the full snapshot rather than only the dependency diff and requires
+no repository-setting changes. Weekly Dependabot configuration is prepared; its
+actual post-merge proposal behavior must be checked by the owner.
+
 ### Known automated WebKit blocker
 
 WebKit 27.2 (Playwright 1.64.1) emits a `style-src-attr` violation when it creates a
